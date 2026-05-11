@@ -4,6 +4,7 @@ import pytest
 
 from ops_bot.ops_requests import build_ops_call
 from ops_bot.routing import route_message
+from ops_bot.service import _format_response
 
 
 def test_route_transfer_slash_command() -> None:
@@ -74,3 +75,24 @@ def test_build_transfer_call_requires_withdraw_destination() -> None:
             },
         )
 
+
+def test_format_balance_response_returns_compact_json_only() -> None:
+    call = build_ops_call("balance", {"exchange": "kc", "missing_fields": []})
+    body = """
+Welcome to Ubuntu 22.04.3 LTS
+
+*** System restart required ***
+{"account":"main","balance":7.72886,"code":200,"exchange":"kc","message":"success","request_id":"ef09efbc071f40deb4bf524669cc9603","token":"USDT"}
+"""
+
+    assert _format_response(call, 200, body) == (
+        '{"account":"main","balance":7.72886,"exchange":"kc","token":"USDT"}'
+    )
+
+
+def test_format_non_json_response_omits_method_and_status() -> None:
+    call = build_ops_call("health", {})
+
+    assert _format_response(call, 500, "service unavailable\n") == (
+        "service unavailable"
+    )

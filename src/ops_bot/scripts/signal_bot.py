@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
+import re
 import time
 import urllib.error
 import urllib.request
@@ -13,8 +14,14 @@ import websocket
 from ops_bot.clients.signal import SignalClient
 from ops_bot.service import handle_user_message
 from ops_bot.settings import app_settings
+from ops_bot.signal_groups import SignalGroupIdCache
 
 logger = logging.getLogger(__name__)
+
+
+def _extract_data_message(payload: dict[str, Any]) -> dict[str, Any]:
+    data_message = payload.get("envelope", {}).get("dataMessage") or {}
+    return data_message if isinstance(data_message, dict) else {}
 
 
 def _receive_url() -> str:
@@ -34,7 +41,7 @@ def _poll_url() -> str:
 
 
 def _extract_text(payload: dict[str, Any]) -> str | None:
-    data_message = payload.get("envelope", {}).get("dataMessage") or {}
+    data_message = _extract_data_message(payload)
     text = (
         data_message.get("message")
         or data_message.get("body")
@@ -49,23 +56,165 @@ def _extract_source(payload: dict[str, Any]) -> str | None:
 
 
 def _reply_target(payload: dict[str, Any]) -> dict[str, str | None]:
-    data_message = payload.get("envelope", {}).get("dataMessage") or {}
-    group_id = _extract_group_id(data_message)
-    if group_id:
-        return {"recipient": None, "group_id": group_id}
+    data_message = _extract_data_message(payload)
+    if _is_group_message(data_message):
+        group_id = _extract_sendable_group_id(data_message)
+        if group_id:
+            return {"recipient": None, "group_id": group_id}
+        logger.warning(
+            "Group message did not include a sendable group id. Set "
+            "SIGNAL_GROUP_ID from GET /v1/groups/%s.",
+            app_settings.signal_sender,
+        )
+        return {"recipient": None, "group_id": None}
     return {"recipient": _extract_source(payload), "group_id": None}
 
 
-def _extract_group_id(data_message: dict[str, Any]) -> str | None:
+def _is_group_message(data_message: dict[str, Any]) -> bool:
+    for key in ("group", "groupInfo", "groupV2"):
+        group = data_message.get(key)
+        if isinstance(group, dict) and group:
+            return True
+    return False
+
+
+def _extract_sendable_group_id(data_message: dict[str, Any]) -> str | None:
+    receive_group_ids = _extract_receive_group_ids(data_message)
+    for group_id in receive_group_ids:
+        if _is_sendable_group_id(group_id):
+            return group_id
+
+    cache = SignalGroupIdCache(app_settings.signal_group_cache_path)
+    cached_group_id = cache.lookup(receive_group_ids)
+    if cached_group_id:
+        return cached_group_id
+
+    if receive_group_ids:
+        try:
+            cache.update_from_groups(SignalClient().list_groups())
+        except Exception as exc:
+            logger.warning("Failed to refresh Signal group id cache: %s", exc)
+        cached_group_id = cache.lookup(receive_group_ids)
+        if cached_group_id:
+            return cached_group_id
+
+    configured_group_id = app_settings.signal_group_id.strip()
+    if _is_sendable_group_id(configured_group_id):
+        return configured_group_id
+    return None
+
+
+def _extract_receive_group_ids(data_message: dict[str, Any]) -> list[str]:
+    receive_group_ids: list[str] = []
     for key in ("group", "groupInfo", "groupV2"):
         group = data_message.get(key)
         if not isinstance(group, dict):
             continue
-        for id_key in ("id", "groupId", "masterKey"):
+        for id_key in ("id", "groupId", "internal_id", "internalId", "masterKey"):
             group_id = group.get(id_key)
-            if group_id:
-                return str(group_id)
-    return None
+            if isinstance(group_id, str) and group_id.strip():
+                receive_group_ids.append(group_id.strip())
+    return _unique(receive_group_ids)
+
+
+def _is_sendable_group_id(group_id: object) -> bool:
+    return isinstance(group_id, str) and group_id.strip().startswith("group.")
+
+
+def _unique(values: list[str]) -> list[str]:
+    seen: set[str] = set()
+    unique_values: list[str] = []
+    for value in values:
+        if value in seen:
+            continue
+        seen.add(value)
+        unique_values.append(value)
+    return unique_values
+
+
+def _configured_mention_aliases() -> list[str]:
+    aliases = [
+        alias.strip()
+        for alias in app_settings.signal_bot_mention_aliases.split(",")
+        if alias.strip()
+    ]
+    if app_settings.signal_sender:
+        aliases.append(app_settings.signal_sender)
+
+    expanded: list[str] = []
+    for alias in aliases:
+        expanded.append(alias)
+        if not alias.startswith("@") and not alias.startswith("+"):
+            expanded.append(f"@{alias}")
+    return sorted(set(expanded), key=len, reverse=True)
+
+
+def _normalise_identifier(value: object) -> str:
+    return str(value).strip().lower().replace(" ", "")
+
+
+def _mentions_bot_by_metadata(data_message: dict[str, Any]) -> bool:
+    mentions = data_message.get("mentions") or data_message.get("messageMentions")
+    if not isinstance(mentions, list):
+        return False
+
+    bot_ids = {
+        _normalise_identifier(identifier)
+        for identifier in _configured_mention_aliases()
+    }
+    for mention in mentions:
+        if isinstance(mention, dict):
+            values = mention.values()
+        else:
+            values = [mention]
+        if any(_normalise_identifier(value) in bot_ids for value in values):
+            return True
+    return False
+
+
+def _alias_pattern(alias: str) -> re.Pattern[str]:
+    escaped = re.escape(alias)
+    if alias.startswith("@"):
+        pattern = rf"(?<!\S){escaped}(?=$|\s|[:,])"
+    else:
+        pattern = rf"(?<![\w@]){escaped}(?=$|[^\w])"
+    return re.compile(pattern, re.IGNORECASE)
+
+
+def _mentions_bot_by_text(text: str) -> bool:
+    return any(
+        _alias_pattern(alias).search(text)
+        for alias in _configured_mention_aliases()
+    )
+
+
+def _strip_bot_mentions(text: str) -> str:
+    stripped = text.replace("\ufffc", " ")
+    for alias in _configured_mention_aliases():
+        stripped = _alias_pattern(alias).sub(" ", stripped)
+    return " ".join(stripped.split())
+
+
+def _text_for_handling(payload: dict[str, Any]) -> str | None:
+    text = _extract_text(payload)
+    if not text:
+        return None
+
+    data_message = _extract_data_message(payload)
+    if not _is_group_message(data_message):
+        return text
+
+    if not (
+        _mentions_bot_by_metadata(data_message)
+        or _mentions_bot_by_text(text)
+    ):
+        logger.info(
+            "Ignoring unmentioned group message from %s.",
+            _extract_source(payload),
+        )
+        return None
+
+    return _strip_bot_mentions(text) or None
 
 
 def _send_reply(message: str, payload: dict[str, Any]) -> None:
@@ -83,7 +232,7 @@ def _send_reply(message: str, payload: dict[str, Any]) -> None:
 
 
 def _handle_payload(payload: dict[str, Any]) -> None:
-    text = _extract_text(payload)
+    text = _text_for_handling(payload)
     if not text:
         return
 

@@ -5,6 +5,7 @@ import json
 from pathlib import Path
 from typing import Any
 import urllib.error
+import urllib.parse
 import urllib.request
 from ops_bot.settings import app_settings
 
@@ -34,6 +35,17 @@ class SignalClient:
             payload["base64_attachments"] = encoded_attachments
 
         return self._post("/v2/send", payload)
+
+    def list_groups(self) -> list[dict[str, Any]]:
+        sender = urllib.parse.quote(self.sender, safe="")
+        response = self._get(f"/v1/groups/{sender}")
+        if isinstance(response, list):
+            return [group for group in response if isinstance(group, dict)]
+        if isinstance(response, dict):
+            groups = response.get("groups", [])
+            if isinstance(groups, list):
+                return [group for group in groups if isinstance(group, dict)]
+        return []
 
     def _resolve_recipients(
         self,
@@ -128,4 +140,24 @@ class SignalClient:
 
         if not raw:
             return {"success": True}
+        return json.loads(raw)
+
+    def _get(self, endpoint: str) -> Any:
+        req = urllib.request.Request(
+            url=f"{self.base_url}{endpoint}",
+            headers={"Content-Type": "application/json"},
+            method="GET",
+        )
+
+        try:
+            with urllib.request.urlopen(req) as resp:
+                raw = resp.read().decode("utf-8")
+        except urllib.error.HTTPError as exc:
+            error_body = exc.read().decode("utf-8", errors="replace")
+            raise RuntimeError(f"Signal API HTTP {exc.code}: {error_body}") from exc
+        except urllib.error.URLError as exc:
+            raise RuntimeError(f"Signal API request failed: {exc.reason}") from exc
+
+        if not raw:
+            return []
         return json.loads(raw)

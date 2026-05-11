@@ -66,4 +66,3 @@ def route_message(text: str) -> RoutedMessage | None:
         return RoutedMessage(agent="monitor", question=stripped)
 
     return None
-
