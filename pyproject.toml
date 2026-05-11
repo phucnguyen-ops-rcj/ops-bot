@@ -1,0 +1,28 @@
+[build-system]
+requires = ["setuptools>=69"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ops-bot"
+version = "0.1.0"
+description = "Signal bot for RCJ ops API requests"
+readme = "README.md"
+requires-python = ">=3.14"
+dependencies = [
+    "baml-py>=0.222.0",
+    "pydantic>=2.11.3",
+    "pydantic-settings>=2.9.1",
+    "websocket-client>=1.9.0",
+]
+
+[project.scripts]
+signal_bot = "ops_bot.scripts.signal_bot:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["ops_bot*", "baml_client*"]
+
+[dependency-groups]
+dev = [
+    "pytest>=9.0.2",
+]
