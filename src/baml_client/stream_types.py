@@ -23,7 +23,7 @@ class StreamState(BaseModel, typing.Generic[StreamStateValueT]):
     value: StreamStateValueT
     state: typing_extensions.Literal["Pending", "Incomplete", "Complete"]
 # #########################################################################
-# Generated classes (4)
+# Generated classes (6)
 # #########################################################################
 
 class BalanceExtraction(BaseModel):
@@ -40,6 +40,11 @@ class MonitorExtraction(BaseModel):
     update_time: typing.Optional[int] = None
     missing_fields: typing.List[str]
 
+class StackerStatusExtraction(BaseModel):
+    symbol: typing.Optional[str] = None
+    date: typing.Optional[str] = None
+    missing_fields: typing.List[str]
+
 class TransferExtraction(BaseModel):
     mode: typing.Optional[str] = None
     token: typing.Optional[str] = None
@@ -47,6 +52,11 @@ class TransferExtraction(BaseModel):
     amount: typing.Optional[float] = None
     sub_account_name: typing.Optional[str] = None
     to_exchange: typing.Optional[str] = None
+    missing_fields: typing.List[str]
+
+class VolumeFillsExtraction(BaseModel):
+    symbol: typing.Optional[str] = None
+    date: typing.Optional[str] = None
     missing_fields: typing.List[str]
 
 # #########################################################################

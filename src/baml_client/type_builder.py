@@ -20,7 +20,7 @@ from .globals import DO_NOT_USE_DIRECTLY_UNLESS_YOU_KNOW_WHAT_YOURE_DOING_RUNTIM
 class TypeBuilder(type_builder.TypeBuilder):
     def __init__(self):
         super().__init__(classes=set(
-          ["BalanceExtraction","HealthExtraction","MonitorExtraction","TransferExtraction",]
+          ["BalanceExtraction","HealthExtraction","MonitorExtraction","StackerStatusExtraction","TransferExtraction","VolumeFillsExtraction",]
         ), enums=set(
           []
         ), runtime=DO_NOT_USE_DIRECTLY_UNLESS_YOU_KNOW_WHAT_YOURE_DOING_RUNTIME)
@@ -31,7 +31,7 @@ class TypeBuilder(type_builder.TypeBuilder):
 
 
     # #########################################################################
-    # Generated classes 4
+    # Generated classes 6
     # #########################################################################
 
     @property
@@ -47,8 +47,16 @@ class TypeBuilder(type_builder.TypeBuilder):
         return MonitorExtractionViewer(self)
 
     @property
+    def StackerStatusExtraction(self) -> "StackerStatusExtractionViewer":
+        return StackerStatusExtractionViewer(self)
+
+    @property
     def TransferExtraction(self) -> "TransferExtractionViewer":
         return TransferExtractionViewer(self)
+
+    @property
+    def VolumeFillsExtraction(self) -> "VolumeFillsExtractionViewer":
+        return VolumeFillsExtractionViewer(self)
 
 
 
@@ -58,7 +66,7 @@ class TypeBuilder(type_builder.TypeBuilder):
 
 
 # #########################################################################
-# Generated classes 4
+# Generated classes 6
 # #########################################################################
 
 class BalanceExtractionAst:
@@ -198,6 +206,53 @@ class MonitorExtractionProperties:
     
 
 
+class StackerStatusExtractionAst:
+    def __init__(self, tb: type_builder.TypeBuilder):
+        _tb = tb._tb # type: ignore (we know how to use this private attribute)
+        self._bldr = _tb.class_("StackerStatusExtraction")
+        self._properties: typing.Set[str] = set([  "symbol",  "date",  "missing_fields",  ])
+        self._props = StackerStatusExtractionProperties(self._bldr, self._properties)
+
+    def type(self) -> baml_py.FieldType:
+        return self._bldr.field()
+
+    @property
+    def props(self) -> "StackerStatusExtractionProperties":
+        return self._props
+
+
+class StackerStatusExtractionViewer(StackerStatusExtractionAst):
+    def __init__(self, tb: type_builder.TypeBuilder):
+        super().__init__(tb)
+
+    
+    def list_properties(self) -> typing.List[typing.Tuple[str, type_builder.ClassPropertyViewer]]:
+        return [(name, type_builder.ClassPropertyViewer(self._bldr.property(name))) for name in self._properties]
+    
+
+
+class StackerStatusExtractionProperties:
+    def __init__(self, bldr: baml_py.ClassBuilder, properties: typing.Set[str]):
+        self.__bldr = bldr
+        self.__properties = properties # type: ignore (we know how to use this private attribute) # noqa: F821
+
+    
+    
+    @property
+    def symbol(self) -> type_builder.ClassPropertyViewer:
+        return type_builder.ClassPropertyViewer(self.__bldr.property("symbol"))
+    
+    @property
+    def date(self) -> type_builder.ClassPropertyViewer:
+        return type_builder.ClassPropertyViewer(self.__bldr.property("date"))
+    
+    @property
+    def missing_fields(self) -> type_builder.ClassPropertyViewer:
+        return type_builder.ClassPropertyViewer(self.__bldr.property("missing_fields"))
+    
+    
+
+
 class TransferExtractionAst:
     def __init__(self, tb: type_builder.TypeBuilder):
         _tb = tb._tb # type: ignore (we know how to use this private attribute)
@@ -253,6 +308,53 @@ class TransferExtractionProperties:
     @property
     def to_exchange(self) -> type_builder.ClassPropertyViewer:
         return type_builder.ClassPropertyViewer(self.__bldr.property("to_exchange"))
+    
+    @property
+    def missing_fields(self) -> type_builder.ClassPropertyViewer:
+        return type_builder.ClassPropertyViewer(self.__bldr.property("missing_fields"))
+    
+    
+
+
+class VolumeFillsExtractionAst:
+    def __init__(self, tb: type_builder.TypeBuilder):
+        _tb = tb._tb # type: ignore (we know how to use this private attribute)
+        self._bldr = _tb.class_("VolumeFillsExtraction")
+        self._properties: typing.Set[str] = set([  "symbol",  "date",  "missing_fields",  ])
+        self._props = VolumeFillsExtractionProperties(self._bldr, self._properties)
+
+    def type(self) -> baml_py.FieldType:
+        return self._bldr.field()
+
+    @property
+    def props(self) -> "VolumeFillsExtractionProperties":
+        return self._props
+
+
+class VolumeFillsExtractionViewer(VolumeFillsExtractionAst):
+    def __init__(self, tb: type_builder.TypeBuilder):
+        super().__init__(tb)
+
+    
+    def list_properties(self) -> typing.List[typing.Tuple[str, type_builder.ClassPropertyViewer]]:
+        return [(name, type_builder.ClassPropertyViewer(self._bldr.property(name))) for name in self._properties]
+    
+
+
+class VolumeFillsExtractionProperties:
+    def __init__(self, bldr: baml_py.ClassBuilder, properties: typing.Set[str]):
+        self.__bldr = bldr
+        self.__properties = properties # type: ignore (we know how to use this private attribute) # noqa: F821
+
+    
+    
+    @property
+    def symbol(self) -> type_builder.ClassPropertyViewer:
+        return type_builder.ClassPropertyViewer(self.__bldr.property("symbol"))
+    
+    @property
+    def date(self) -> type_builder.ClassPropertyViewer:
+        return type_builder.ClassPropertyViewer(self.__bldr.property("date"))
     
     @property
     def missing_fields(self) -> type_builder.ClassPropertyViewer:

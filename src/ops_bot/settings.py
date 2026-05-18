@@ -29,9 +29,11 @@ class Settings(BaseSettings):
     signal_base_url: str = Field(default="http://127.0.0.1:8081")
     signal_sender: str
     signal_group_cache_path: Path = Field(default=Path("signal_groups.yml"))
+    signal_group_id: str = Field(default="")
     signal_bot_receive_mode: Literal["auto", "websocket", "poll"] = Field(
         default="auto"
     )
+    signal_bot_mention_aliases: str = Field(default="opsbot,@opsbot")
     signal_bot_poll_seconds: float = Field(default=2.0)
 
     # OPENAI
@@ -51,6 +53,7 @@ class Settings(BaseSettings):
         "signal_base_url",
         "signal_sender",
         "signal_bot_receive_mode",
+        "signal_bot_mention_aliases",
         "signal_bot_poll_seconds",
         "openai_api_key",
         "rcj_ops_bearer_token",
@@ -58,6 +61,7 @@ class Settings(BaseSettings):
         "rcj_ops_timeout_seconds",
         "rcj_ops_execution_mode",
         "rcj_ops_ssh_host",
+        "signal_group_id",
         "log_level",
         mode="before",
     )

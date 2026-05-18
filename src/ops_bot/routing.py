@@ -3,7 +3,14 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Literal
 
-AgentName = Literal["health", "balance", "transfer", "monitor"]
+AgentName = Literal[
+    "health",
+    "balance",
+    "transfer",
+    "monitor",
+    "volume_fills",
+    "stacker_status",
+]
 
 
 @dataclass(frozen=True)
@@ -23,6 +30,8 @@ COMMAND_ALIASES: dict[str, AgentName] = {
     "/withdraw": "transfer",
     "/monitor": "monitor",
     "/watch": "monitor",
+    "/volume-fills": "volume_fills",
+    "/stacker-status": "stacker_status",
 }
 
 
@@ -64,5 +73,22 @@ def route_message(text: str) -> RoutedMessage | None:
 
     if any(phrase in lower for phrase in ("monitor", "watch positions", "show strategy", "stream monitor")):
         return RoutedMessage(agent="monitor", question=stripped)
+
+    if any(
+        phrase in lower
+        for phrase in ("volume fills", "strategy fills", "volume-fills")
+    ):
+        return RoutedMessage(agent="volume_fills", question=stripped)
+
+    if any(
+        phrase in lower
+        for phrase in (
+            "stacker status",
+            "stacker-status",
+            "accepted orders",
+            "check status",
+        )
+    ):
+        return RoutedMessage(agent="stacker_status", question=stripped)
 
     return None

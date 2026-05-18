@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any, Literal
 
+from ops_bot.clients.ops_api import normalize_symbol
 from ops_bot.routing import AgentName
 
 SUPPORTED_EXCHANGES = {
@@ -55,6 +56,10 @@ def build_ops_call(agent: AgentName, extracted: dict[str, Any]) -> OpsCall:
     if agent == "monitor":
         update_time = extracted.get("update_time") or 10
         return OpsCall("/run-monitor", "POST", True, {"update_time": int(update_time)})
+    if agent == "volume_fills":
+        return _build_volume_fills_call(extracted)
+    if agent == "stacker_status":
+        return _build_stacker_status_call(extracted)
     raise ValueError(f"Unsupported agent: {agent}")
 
 
@@ -139,6 +144,39 @@ def _build_transfer_call(extracted: dict[str, Any]) -> OpsCall:
     return OpsCall("/run-transfer", "POST", True, payload)
 
 
+def _build_volume_fills_call(extracted: dict[str, Any]) -> OpsCall:
+    symbol = _normalize_symbol_field(extracted.get("symbol"))
+    if not symbol:
+        raise ValueError("Which symbol?")
+
+    normalized_symbol = normalize_symbol(symbol)
+    base_currency, quote_currency = normalized_symbol.split("-", maxsplit=1)
+    payload: dict[str, Any] = {
+        "base_currency": base_currency,
+        "quote_currency": quote_currency,
+    }
+
+    date = _normalize_optional_string(extracted.get("date"))
+    if date:
+        payload["date"] = _validate_compact_date(date)
+
+    return OpsCall("/get_volume_strategy_fills", "POST", True, payload)
+
+
+def _build_stacker_status_call(extracted: dict[str, Any]) -> OpsCall:
+    symbol = _normalize_symbol_field(extracted.get("symbol"))
+    if not symbol:
+        raise ValueError("Which symbol?")
+
+    payload: dict[str, Any] = {"symbol": normalize_symbol(symbol)}
+
+    date = _normalize_optional_string(extracted.get("date"))
+    if date:
+        payload["date"] = _validate_compact_date(date)
+
+    return OpsCall("/get_stacker_accepted_orders", "POST", True, payload)
+
+
 def _requires_sub_account(mode: str, from_exchange: str) -> bool:
     if mode in {"future_to_spot", "spot_to_future", "future_to_main", "main_to_future"}:
         return from_exchange == "kcf"
@@ -151,3 +189,15 @@ def _normalize_optional_string(value: Any) -> str | None:
     normalized = str(value).strip()
     return normalized.lower() or None
 
+
+def _normalize_symbol_field(value: Any) -> str | None:
+    if value is None:
+        return None
+    normalized = str(value).strip().upper().replace("_", "-").replace("/", "-")
+    return normalized or None
+
+
+def _validate_compact_date(value: str) -> str:
+    if len(value) != 8 or not value.isdigit():
+        raise ValueError("Date must be in YYYYMMDD format.")
+    return value

@@ -22,6 +22,21 @@ def test_route_balance_keyword() -> None:
     assert routed.agent == "balance"
 
 
+def test_route_volume_fills_slash_command() -> None:
+    routed = route_message("/volume-fills KAIO")
+
+    assert routed is not None
+    assert routed.agent == "volume_fills"
+    assert routed.question == "KAIO"
+
+
+def test_route_stacker_status_keyword() -> None:
+    routed = route_message("check status for KAIO-USDT")
+
+    assert routed is not None
+    assert routed.agent == "stacker_status"
+
+
 def test_build_balance_call_defaults_token_and_account() -> None:
     call = build_ops_call("balance", {"exchange": "kucoin", "missing_fields": []})
 
@@ -73,6 +88,51 @@ def test_build_transfer_call_requires_withdraw_destination() -> None:
                 "amount": 10,
                 "missing_fields": [],
             },
+        )
+
+
+def test_build_volume_fills_call_defaults_quote_currency() -> None:
+    call = build_ops_call("volume_fills", {"symbol": "kaio", "missing_fields": []})
+
+    assert call.endpoint == "/get_volume_strategy_fills"
+    assert call.method == "POST"
+    assert call.payload == {
+        "base_currency": "KAIO",
+        "quote_currency": "USDT",
+    }
+
+
+def test_build_volume_fills_call_accepts_date() -> None:
+    call = build_ops_call(
+        "volume_fills",
+        {"symbol": "KAIO-USDT", "date": "20260504", "missing_fields": []},
+    )
+
+    assert call.payload == {
+        "base_currency": "KAIO",
+        "quote_currency": "USDT",
+        "date": "20260504",
+    }
+
+
+def test_build_stacker_status_call_normalizes_symbol() -> None:
+    call = build_ops_call(
+        "stacker_status",
+        {"symbol": "kaio_usdt", "date": "20260504", "missing_fields": []},
+    )
+
+    assert call.endpoint == "/get_stacker_accepted_orders"
+    assert call.payload == {
+        "symbol": "KAIO-USDT",
+        "date": "20260504",
+    }
+
+
+def test_build_stacker_status_call_rejects_bad_date() -> None:
+    with pytest.raises(ValueError, match="YYYYMMDD"):
+        build_ops_call(
+            "stacker_status",
+            {"symbol": "KAIO-USDT", "date": "2026-05-04", "missing_fields": []},
         )
 
 

@@ -2,7 +2,7 @@
 
 Standalone Signal bot for RCJ ops API commands.
 
-The bot listens to `signal-cli-rest-api`, routes a message to one of four small
+The bot listens to `signal-cli-rest-api`, routes a message to one of six small
 BAML extraction functions, validates the typed parameters in Python, calls the
 RCJ ops API, and sends the response back to Signal.
 
@@ -15,9 +15,17 @@ Prefer slash commands because routing is deterministic:
 /balance kucoin USDT main
 /transfer sub to main 10 USDT from kc sub account ktfsmc15
 /monitor every 10 seconds
+/volume-fills KAIO
+/stacker-status KAIO-USDT
 ```
 
-Keyword routing also exists for health, balance, transfer, and monitor messages.
+Keyword routing also exists for health, balance, transfer, monitor,
+`volume-fills`, and `stacker-status` messages.
+
+`/volume-fills` posts to `/get_volume_strategy_fills` using
+`base_currency`/`quote_currency` derived from the symbol. `/stacker-status`
+posts to `/get_stacker_accepted_orders` using the normalized symbol. Both
+accept an optional `date` in `YYYYMMDD` format.
 
 ## Setup
 

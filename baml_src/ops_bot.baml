@@ -25,6 +25,18 @@ class MonitorExtraction {
   missing_fields string[]
 }
 
+class VolumeFillsExtraction {
+  symbol string?
+  date string?
+  missing_fields string[]
+}
+
+class StackerStatusExtraction {
+  symbol string?
+  date string?
+  missing_fields string[]
+}
+
 function ExtractHealthRequest(user_question: string) -> HealthExtraction {
   client OpsExtractor
   prompt #"
@@ -123,3 +135,44 @@ function ExtractMonitorRequest(user_question: string) -> MonitorExtraction {
   "#
 }
 
+function ExtractVolumeFillsRequest(user_question: string) -> VolumeFillsExtraction {
+  client OpsExtractor
+  prompt #"
+    Extract parameters for POST /get_volume_strategy_fills from the user request.
+
+    Rules:
+    - symbol is required.
+    - symbol may be provided as a full pair like KAIO-USDT or just the base
+      asset like KAIO.
+    - Keep symbol as written by the user except normalize obvious separators
+      mentally; Python will normalize final formatting.
+    - date is optional and should be YYYYMMDD if present.
+    - Put any required but missing fields in missing_fields.
+
+    User request:
+    {{ user_question }}
+
+    {{ ctx.output_format }}
+  "#
+}
+
+function ExtractStackerStatusRequest(user_question: string) -> StackerStatusExtraction {
+  client OpsExtractor
+  prompt #"
+    Extract parameters for POST /get_stacker_accepted_orders from the user request.
+
+    Rules:
+    - symbol is required.
+    - symbol may be provided as a full pair like KAIO-USDT or just the base
+      asset like KAIO.
+    - Keep symbol as written by the user except normalize obvious separators
+      mentally; Python will normalize final formatting.
+    - date is optional and should be YYYYMMDD if present.
+    - Put any required but missing fields in missing_fields.
+
+    User request:
+    {{ user_question }}
+
+    {{ ctx.output_format }}
+  "#
+}

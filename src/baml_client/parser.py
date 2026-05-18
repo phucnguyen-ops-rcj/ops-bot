@@ -41,11 +41,23 @@ class LlmResponseParser:
         __result__ = self.__options.merge_options(baml_options).parse_response(function_name="ExtractMonitorRequest", llm_response=llm_response, mode="request")
         return typing.cast(types.MonitorExtraction, __result__)
 
+    def ExtractStackerStatusRequest(
+        self, llm_response: str, baml_options: BamlCallOptions = {},
+    ) -> types.StackerStatusExtraction:
+        __result__ = self.__options.merge_options(baml_options).parse_response(function_name="ExtractStackerStatusRequest", llm_response=llm_response, mode="request")
+        return typing.cast(types.StackerStatusExtraction, __result__)
+
     def ExtractTransferRequest(
         self, llm_response: str, baml_options: BamlCallOptions = {},
     ) -> types.TransferExtraction:
         __result__ = self.__options.merge_options(baml_options).parse_response(function_name="ExtractTransferRequest", llm_response=llm_response, mode="request")
         return typing.cast(types.TransferExtraction, __result__)
+
+    def ExtractVolumeFillsRequest(
+        self, llm_response: str, baml_options: BamlCallOptions = {},
+    ) -> types.VolumeFillsExtraction:
+        __result__ = self.__options.merge_options(baml_options).parse_response(function_name="ExtractVolumeFillsRequest", llm_response=llm_response, mode="request")
+        return typing.cast(types.VolumeFillsExtraction, __result__)
 
     
 
@@ -73,10 +85,22 @@ class LlmStreamParser:
         __result__ = self.__options.merge_options(baml_options).parse_response(function_name="ExtractMonitorRequest", llm_response=llm_response, mode="stream")
         return typing.cast(stream_types.MonitorExtraction, __result__)
 
+    def ExtractStackerStatusRequest(
+        self, llm_response: str, baml_options: BamlCallOptions = {},
+    ) -> stream_types.StackerStatusExtraction:
+        __result__ = self.__options.merge_options(baml_options).parse_response(function_name="ExtractStackerStatusRequest", llm_response=llm_response, mode="stream")
+        return typing.cast(stream_types.StackerStatusExtraction, __result__)
+
     def ExtractTransferRequest(
         self, llm_response: str, baml_options: BamlCallOptions = {},
     ) -> stream_types.TransferExtraction:
         __result__ = self.__options.merge_options(baml_options).parse_response(function_name="ExtractTransferRequest", llm_response=llm_response, mode="stream")
         return typing.cast(stream_types.TransferExtraction, __result__)
+
+    def ExtractVolumeFillsRequest(
+        self, llm_response: str, baml_options: BamlCallOptions = {},
+    ) -> stream_types.VolumeFillsExtraction:
+        __result__ = self.__options.merge_options(baml_options).parse_response(function_name="ExtractVolumeFillsRequest", llm_response=llm_response, mode="stream")
+        return typing.cast(stream_types.VolumeFillsExtraction, __result__)
 
     

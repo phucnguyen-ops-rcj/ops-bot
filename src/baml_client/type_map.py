@@ -25,8 +25,14 @@ type_map = {
     "types.MonitorExtraction": types.MonitorExtraction,
     "stream_types.MonitorExtraction": stream_types.MonitorExtraction,
 
+    "types.StackerStatusExtraction": types.StackerStatusExtraction,
+    "stream_types.StackerStatusExtraction": stream_types.StackerStatusExtraction,
+
     "types.TransferExtraction": types.TransferExtraction,
     "stream_types.TransferExtraction": stream_types.TransferExtraction,
+
+    "types.VolumeFillsExtraction": types.VolumeFillsExtraction,
+    "stream_types.VolumeFillsExtraction": stream_types.VolumeFillsExtraction,
 
 
 }

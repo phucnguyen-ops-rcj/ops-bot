@@ -27,6 +27,10 @@ async def extract_params(agent: AgentName, user_question: str) -> dict[str, Any]
         result = await b.ExtractTransferRequest(user_question, baml_options)
     elif agent == "monitor":
         result = await b.ExtractMonitorRequest(user_question, baml_options)
+    elif agent == "volume_fills":
+        result = await b.ExtractVolumeFillsRequest(user_question, baml_options)
+    elif agent == "stacker_status":
+        result = await b.ExtractStackerStatusRequest(user_question, baml_options)
     else:
         raise ValueError(f"Unsupported agent: {agent}")
 
