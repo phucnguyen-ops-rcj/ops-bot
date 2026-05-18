@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-import json
-
 from ops_bot.clients.ops_api import OpsApiClient
 from ops_bot.extractor import extract_params
 from ops_bot.new_listing import (
@@ -9,6 +7,7 @@ from ops_bot.new_listing import (
     handle_new_listing_command,
 )
 from ops_bot.ops_requests import OpsCall, build_ops_call
+from ops_bot.response_format import format_ops_response_body
 from ops_bot.responses import BotResponse
 from ops_bot.stackers import (
     SETUP_STACKERS_INPUT_TEMPLATE,
@@ -97,32 +96,4 @@ def _format_dry_run(call: OpsCall) -> str:
 
 
 def _format_response(call: OpsCall, status: int, body: str) -> str:
-    payload = _extract_json_payload(body)
-    if isinstance(payload, dict):
-        if call.endpoint == "/get-balance":
-            payload = _compact_balance_payload(payload)
-        return json.dumps(payload, separators=(",", ":"), ensure_ascii=False)
-
-    cleaned_body = body.rstrip()
-    return cleaned_body or "<empty response>"
-
-
-def _extract_json_payload(body: str) -> dict | list | None:
-    decoder = json.JSONDecoder()
-    latest_payload: dict | list | None = None
-    for index, char in enumerate(body):
-        if char not in "[{":
-            continue
-        try:
-            payload, _ = decoder.raw_decode(body[index:])
-        except json.JSONDecodeError:
-            continue
-        if isinstance(payload, (dict, list)):
-            latest_payload = payload
-    return latest_payload
-
-
-def _compact_balance_payload(payload: dict) -> dict:
-    keys = ("account", "balance", "exchange", "token")
-    compact = {key: payload[key] for key in keys if key in payload}
-    return compact or payload
+    return format_ops_response_body(call.endpoint, body)

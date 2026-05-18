@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import Any
 
 from ops_bot.clients.ops_api import OpsApiClient
+from ops_bot.response_format import format_ops_response_body
 from ops_bot.responses import BotResponse
 from ops_bot.settings import app_settings
 
@@ -174,7 +175,10 @@ def handle_setup_stackers_command(question: str, *, dry_run: bool) -> BotRespons
         response_status=response.status,
         response_body=response.body,
     )
-    return BotResponse(message=response.body, attachments=(body_path,))
+    return BotResponse(
+        message=format_ops_response_body("/setup_stacker_config", response.body),
+        attachments=(body_path,),
+    )
 
 
 def build_stacker_request_body(request: StackerSetupRequest) -> dict[str, Any]:

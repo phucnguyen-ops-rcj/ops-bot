@@ -2,12 +2,15 @@ from __future__ import annotations
 
 import asyncio
 import json
+from contextlib import redirect_stdout
+from io import StringIO
 from pathlib import Path
 
 from ops_bot.new_listing.bot_service import (
     NEW_LISTING_INPUT_TEMPLATE,
     handle_new_listing_command,
 )
+from ops_bot.new_listing.workflow import ApiResponse, print_response
 from ops_bot.responses import BotResponse
 from ops_bot.new_listing.workflow import resolve_config_path
 from ops_bot.service import handle_user_message
@@ -258,3 +261,18 @@ def test_resolve_config_path_uses_settings_dir(
         symbol = "ATWO"
 
     assert resolve_config_path(Args()) == config_dir / "ATWO.json"
+
+
+def test_new_listing_print_response_strips_ssh_banner() -> None:
+    buffer = StringIO()
+
+    with redirect_stdout(buffer):
+        print_response(
+            ApiResponse(
+                step="1",
+                status=200,
+                body='Welcome to Ubuntu 22.04.3 LTS\n{"status":"ok"}',
+            )
+        )
+
+    assert buffer.getvalue() == '\nStep 1 HTTP 200\n{"status":"ok"}\n'

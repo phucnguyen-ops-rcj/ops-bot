@@ -181,3 +181,52 @@ def test_format_non_json_response_omits_method_and_status() -> None:
     assert _format_response(call, 500, "service unavailable\n") == (
         "service unavailable"
     )
+
+
+def test_format_non_json_response_strips_ssh_banner() -> None:
+    call = build_ops_call("health", {})
+    body = """Welcome to Ubuntu 22.04.3 LTS (GNU/Linux 6.5.0-1023-aws x86_64)
+
+ * Documentation:  https://help.ubuntu.com
+ * Management:     https://landscape.canonical.com
+ * Support:        https://ubuntu.com/advantage
+
+  System information as of Mon May 18 11:17:08 UTC 2026
+
+  System load:  4.82861328125       Processes:             3895
+  Usage of /:   92.0% of 968.99GB   Users logged in:       2
+  Memory usage: 70%                 IPv4 address for ens5: 172.31.41.68
+  Swap usage:   0%
+
+  => / is using 92.0% of 968.99GB
+
+ * Ubuntu Pro delivers the most comprehensive open source security and
+   compliance features.
+
+   https://ubuntu.com/aws/pro
+
+Expanded Security Maintenance for Applications is not enabled.
+
+173 updates can be applied immediately.
+To see these additional updates run: apt list --upgradable
+
+16 additional security updates can be applied with ESM Apps.
+Learn more about enabling ESM Apps service at https://ubuntu.com/esm
+
+New release '24.04.4 LTS' available.
+Run 'do-release-upgrade' to upgrade to it.
+
+
+*** System restart required ***
+✅ success
+==================================================================
+kucoincpp_ATWO_USDT_twkpi_st_1.txtpb.INFO:
+NEW_ORDER_STATUS_ACCEPTED = 26
+"""
+
+    assert _format_response(call, 200, body) == (
+        "✅ success\n"
+        "==================================================================\n"
+        "kucoincpp_ATWO_USDT_twkpi_st_1.txtpb.INFO:\n"
+        "NEW_ORDER_STATUS_ACCEPTED = 26"
+    )

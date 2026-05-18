@@ -15,6 +15,7 @@ from ops_bot.clients.ops_api import (
     DEFAULT_OPS_SSH_HOST,
     OpsApiClient,
 )
+from ops_bot.response_format import format_ops_response_body
 from ops_bot.settings import app_settings
 
 logger = logging.getLogger(__name__)
@@ -241,7 +242,7 @@ def run_step(
 
 def print_response(response: ApiResponse) -> None:
     print(f"\nStep {response.step} HTTP {response.status}")
-    print(response.body.rstrip())
+    print(format_ops_response_body("", response.body))
 
 
 def response_has_symbol_not_found(response: ApiResponse) -> bool:

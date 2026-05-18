@@ -123,7 +123,10 @@ def test_setup_stackers_executes_api_in_real_mode(
         return OpsApiResponse(
             endpoint=endpoint,
             status=200,
-            body='{"status":"ok"}',
+            body=(
+                "Welcome to Ubuntu 22.04.3 LTS\n"
+                '{"status":"ok"}'
+            ),
             payload=payload,
         )
 
