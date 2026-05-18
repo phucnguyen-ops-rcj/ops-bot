@@ -54,7 +54,7 @@ class Settings(BaseSettings):
         default=DEFAULT_DATA_ROOT / "new_listing/gateway_symbols.yml"
     )
     new_listing_trading_volume_path: Path = Field(
-        default=DEFAULT_DATA_ROOT / "new_listing/trading_volume.json"
+        default=DEFAULT_DATA_ROOT / "trading_volume.json"
     )
     new_listing_account_id: str = Field(default="ktfsmc15")
 
