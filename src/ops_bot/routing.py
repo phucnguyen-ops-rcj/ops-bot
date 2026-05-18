@@ -12,6 +12,7 @@ AgentName = Literal[
     "volume_fills",
     "stacker_status",
     "new_listing",
+    "setup_stackers",
 ]
 
 
@@ -32,6 +33,8 @@ COMMAND_HELP: tuple[str, ...] = (
     "/stacker-status -> check stacker accepted orders",
     "/new-listing -> create config and run new-listing workflow",
     "/new-listing-dryrun -> create config and run dry-run preview",
+    "/setup-stackers -> create and save stacker request body",
+    "/setup-stackers-dryrun -> create and save dry-run stacker request body",
 )
 
 COMMAND_ALIASES: dict[str, AgentName] = {
@@ -49,10 +52,17 @@ COMMAND_ALIASES: dict[str, AgentName] = {
     "/stacker-status": "stacker_status",
     "/new-listing": "new_listing",
     "/new-listing-dryrun": "new_listing",
+    "/setup-stackers": "setup_stackers",
+    "/setup-stackers-dryrun": "setup_stackers",
+    "/setup-stacker-config": "setup_stackers",
 }
 
 NEW_LISTING_DRYRUN_COMMANDS = frozenset({"/new-listing-dryrun"})
 NEW_LISTING_TEMPLATE_COMMANDS = frozenset({"/new-listing", *NEW_LISTING_DRYRUN_COMMANDS})
+SETUP_STACKERS_DRYRUN_COMMANDS = frozenset({"/setup-stackers-dryrun"})
+SETUP_STACKERS_TEMPLATE_COMMANDS = frozenset(
+    {"/setup-stackers", "/setup-stacker-config", *SETUP_STACKERS_DRYRUN_COMMANDS}
+)
 
 
 def route_message(text: str) -> RoutedMessage | None:
@@ -60,8 +70,9 @@ def route_message(text: str) -> RoutedMessage | None:
     if not stripped:
         return None
 
-    first, _, rest = stripped.partition(" ")
-    command = first.lower()
+    parts = stripped.split(maxsplit=1)
+    command = parts[0].lower()
+    rest = parts[1] if len(parts) > 1 else ""
     if command in COMMAND_ALIASES:
         return RoutedMessage(
             agent=COMMAND_ALIASES[command],
@@ -117,6 +128,12 @@ def route_message(text: str) -> RoutedMessage | None:
         phrase in lower for phrase in ("new listing", "new-listing", "newlisting")
     ):
         return RoutedMessage(agent="new_listing", question=stripped)
+
+    if any(
+        phrase in lower
+        for phrase in ("setup stackers", "setup stacker config", "stacker config")
+    ):
+        return RoutedMessage(agent="setup_stackers", question=stripped)
 
     if any(phrase in lower for phrase in ("help", "commands", "what can you do")):
         return RoutedMessage(agent="help", question=stripped)

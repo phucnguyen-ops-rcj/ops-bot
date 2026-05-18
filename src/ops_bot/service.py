@@ -10,10 +10,16 @@ from ops_bot.new_listing import (
 )
 from ops_bot.ops_requests import OpsCall, build_ops_call
 from ops_bot.responses import BotResponse
+from ops_bot.stackers import (
+    SETUP_STACKERS_INPUT_TEMPLATE,
+    handle_setup_stackers_command,
+)
 from ops_bot.routing import (
     COMMAND_HELP,
     NEW_LISTING_DRYRUN_COMMANDS,
     NEW_LISTING_TEMPLATE_COMMANDS,
+    SETUP_STACKERS_DRYRUN_COMMANDS,
+    SETUP_STACKERS_TEMPLATE_COMMANDS,
     route_message,
 )
 
@@ -35,6 +41,18 @@ async def handle_user_message(
 
     if routed.agent == "new_listing" and routed.command in NEW_LISTING_TEMPLATE_COMMANDS and routed.question.strip() in {"", routed.command}:
         return NEW_LISTING_INPUT_TEMPLATE
+
+    if routed.agent == "setup_stackers" and routed.command in SETUP_STACKERS_TEMPLATE_COMMANDS and routed.question.strip() in {"", routed.command}:
+        return SETUP_STACKERS_INPUT_TEMPLATE
+
+    if routed.agent == "setup_stackers":
+        try:
+            return handle_setup_stackers_command(
+                routed.question,
+                dry_run=routed.command in SETUP_STACKERS_DRYRUN_COMMANDS,
+            )
+        except ValueError as exc:
+            return str(exc)
 
     extracted = await extract_params(routed.agent, routed.question)
     missing_fields = [field for field in extracted.get("missing_fields", []) if field]

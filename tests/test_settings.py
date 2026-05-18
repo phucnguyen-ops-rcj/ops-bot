@@ -40,3 +40,5 @@ def test_new_listing_paths_default_to_shared_data_root() -> None:
         DEFAULT_DATA_ROOT / "new_listing/gateway_symbols.yml"
     )
     assert settings.new_listing_trading_volume_path == DEFAULT_DATA_ROOT / "trading_volume.json"
+    assert settings.stacker_config_dir == DEFAULT_DATA_ROOT / "stackers/config"
+    assert settings.stacker_logs_dir == DEFAULT_DATA_ROOT / "stackers/logs"

@@ -27,6 +27,7 @@ def test_help_response() -> None:
     assert "/health, /ping -> API health check" in response
     assert "/new-listing -> create config and run new-listing workflow" in response
     assert "/new-listing-dryrun -> create config and run dry-run preview" in response
+    assert "/setup-stackers -> create and save stacker request body" in response
 
 
 def test_handle_new_listing_command_saves_config_and_trading_volume(

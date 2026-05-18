@@ -57,6 +57,8 @@ class Settings(BaseSettings):
         default=DEFAULT_DATA_ROOT / "trading_volume.json"
     )
     new_listing_account_id: str = Field(default="ktfsmc15")
+    stacker_config_dir: Path = Field(default=DEFAULT_DATA_ROOT / "stackers/config")
+    stacker_logs_dir: Path = Field(default=DEFAULT_DATA_ROOT / "stackers/logs")
 
     # Logging
     log_level: str = Field(default="INFO")
@@ -96,6 +98,8 @@ class Settings(BaseSettings):
         "new_listing_logs_dir",
         "new_listing_gateway_symbols_path",
         "new_listing_trading_volume_path",
+        "stacker_config_dir",
+        "stacker_logs_dir",
         mode="before",
     )
     @classmethod

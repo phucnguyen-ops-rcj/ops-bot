@@ -51,6 +51,13 @@ def test_route_help_slash_command() -> None:
     assert routed.agent == "help"
 
 
+def test_route_setup_stackers_slash_command() -> None:
+    routed = route_message('/setup-stackers {"base_ccy":"SHARE"}')
+
+    assert routed is not None
+    assert routed.agent == "setup_stackers"
+
+
 def test_removed_newlisting_alias_no_longer_routes() -> None:
     assert route_message("/newlisting") is None
 
