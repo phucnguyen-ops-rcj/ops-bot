@@ -136,6 +136,20 @@ class BamlSyncClient:
                 "user_question": user_question,
             })
             return typing.cast(types.MonitorExtraction, __result__.cast_to(types, types, stream_types, False, __runtime__))
+    def ExtractNewListingRequest(self, user_question: str,
+        baml_options: BamlCallOptions = {},
+    ) -> types.NewListingExtraction:
+        # Check if on_tick is provided
+        if 'on_tick' in baml_options:
+            __stream__ = self.stream.ExtractNewListingRequest(user_question=user_question,
+                baml_options=baml_options)
+            return __stream__.get_final_response()
+        else:
+            # Original non-streaming code
+            __result__ = self.__options.merge_options(baml_options).call_function_sync(function_name="ExtractNewListingRequest", args={
+                "user_question": user_question,
+            })
+            return typing.cast(types.NewListingExtraction, __result__.cast_to(types, types, stream_types, False, __runtime__))
     def ExtractStackerStatusRequest(self, user_question: str,
         baml_options: BamlCallOptions = {},
     ) -> types.StackerStatusExtraction:
@@ -223,6 +237,18 @@ class BamlStreamClient:
           lambda x: typing.cast(types.MonitorExtraction, x.cast_to(types, types, stream_types, False, __runtime__)),
           __ctx__,
         )
+    def ExtractNewListingRequest(self, user_question: str,
+        baml_options: BamlCallOptions = {},
+    ) -> baml_py.BamlSyncStream[stream_types.NewListingExtraction, types.NewListingExtraction]:
+        __ctx__, __result__ = self.__options.merge_options(baml_options).create_sync_stream(function_name="ExtractNewListingRequest", args={
+            "user_question": user_question,
+        })
+        return baml_py.BamlSyncStream[stream_types.NewListingExtraction, types.NewListingExtraction](
+          __result__,
+          lambda x: typing.cast(stream_types.NewListingExtraction, x.cast_to(types, types, stream_types, True, __runtime__)),
+          lambda x: typing.cast(types.NewListingExtraction, x.cast_to(types, types, stream_types, False, __runtime__)),
+          __ctx__,
+        )
     def ExtractStackerStatusRequest(self, user_question: str,
         baml_options: BamlCallOptions = {},
     ) -> baml_py.BamlSyncStream[stream_types.StackerStatusExtraction, types.StackerStatusExtraction]:
@@ -288,6 +314,13 @@ class BamlHttpRequestClient:
             "user_question": user_question,
         }, mode="request")
         return __result__
+    def ExtractNewListingRequest(self, user_question: str,
+        baml_options: BamlCallOptions = {},
+    ) -> baml_py.baml_py.HTTPRequest:
+        __result__ = self.__options.merge_options(baml_options).create_http_request_sync(function_name="ExtractNewListingRequest", args={
+            "user_question": user_question,
+        }, mode="request")
+        return __result__
     def ExtractStackerStatusRequest(self, user_question: str,
         baml_options: BamlCallOptions = {},
     ) -> baml_py.baml_py.HTTPRequest:
@@ -335,6 +368,13 @@ class BamlHttpStreamRequestClient:
         baml_options: BamlCallOptions = {},
     ) -> baml_py.baml_py.HTTPRequest:
         __result__ = self.__options.merge_options(baml_options).create_http_request_sync(function_name="ExtractMonitorRequest", args={
+            "user_question": user_question,
+        }, mode="stream")
+        return __result__
+    def ExtractNewListingRequest(self, user_question: str,
+        baml_options: BamlCallOptions = {},
+    ) -> baml_py.baml_py.HTTPRequest:
+        __result__ = self.__options.merge_options(baml_options).create_http_request_sync(function_name="ExtractNewListingRequest", args={
             "user_question": user_question,
         }, mode="stream")
         return __result__

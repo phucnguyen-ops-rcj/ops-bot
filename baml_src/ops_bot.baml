@@ -37,6 +37,18 @@ class StackerStatusExtraction {
   missing_fields string[]
 }
 
+class NewListingExtraction {
+  symbol string?
+  market string?
+  tier string?
+  price_decimals int?
+  quantity_decimals int?
+  feed_port int?
+  gateway_port int?
+  create_new_gate_way bool?
+  missing_fields string[]
+}
+
 function ExtractHealthRequest(user_question: string) -> HealthExtraction {
   client OpsExtractor
   prompt #"
@@ -168,6 +180,33 @@ function ExtractStackerStatusRequest(user_question: string) -> StackerStatusExtr
     - Keep symbol as written by the user except normalize obvious separators
       mentally; Python will normalize final formatting.
     - date is optional and should be YYYYMMDD if present.
+    - Put any required but missing fields in missing_fields.
+
+    User request:
+    {{ user_question }}
+
+    {{ ctx.output_format }}
+  "#
+}
+
+function ExtractNewListingRequest(user_question: string) -> NewListingExtraction {
+  client OpsExtractor
+  prompt #"
+    Extract parameters for preparing a new listing config file.
+
+    Rules:
+    - symbol is required.
+    - market is optional and defaults to spot.
+    - tier is required. Keep the user tier value, usually S, A, B, or C.
+    - price_decimals is required. Convert phrases like "1 * 5 decimal places"
+      to 5.
+    - quantity_decimals is required. Convert phrases like "1 * 1 decimal place"
+      to 1.
+    - feed_port is required. Convert host/port text like "feed port: 41739",
+      "feedhost: 41739", or "stacker feedhost: 41739" to 41739.
+    - gateway_port is required. Convert host/port text like
+      "mirror spot listing gateway: 45704" to 45704.
+    - create_new_gate_way is optional and defaults to false.
     - Put any required but missing fields in missing_fields.
 
     User request:

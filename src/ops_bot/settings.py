@@ -1,6 +1,4 @@
 from __future__ import annotations
-
-import os
 from functools import lru_cache
 from pathlib import Path
 from typing import Literal
@@ -9,6 +7,7 @@ from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 ENV_FILE = Path(__file__).resolve().parents[2] / ".env"
+DEFAULT_DATA_ROOT = Path("/data") if Path("/data").exists() else Path(".docker-data")
 
 
 def _strip_outer_quotes(value: str) -> str:
@@ -46,6 +45,19 @@ class Settings(BaseSettings):
     rcj_ops_execution_mode: Literal["ssh", "local"] = Field(default="ssh")
     rcj_ops_ssh_host: str = Field(default="T1_newuser1")
 
+    # New listing
+    new_listing_config_dir: Path = Field(
+        default=DEFAULT_DATA_ROOT / "new_listing/config"
+    )
+    new_listing_logs_dir: Path = Field(default=DEFAULT_DATA_ROOT / "new_listing/logs")
+    new_listing_gateway_symbols_path: Path = Field(
+        default=DEFAULT_DATA_ROOT / "new_listing/gateway_symbols.yml"
+    )
+    new_listing_trading_volume_path: Path = Field(
+        default=DEFAULT_DATA_ROOT / "new_listing/trading_volume.json"
+    )
+    new_listing_account_id: str = Field(default="ktfsmc15")
+
     # Logging
     log_level: str = Field(default="INFO")
 
@@ -61,6 +73,7 @@ class Settings(BaseSettings):
         "rcj_ops_timeout_seconds",
         "rcj_ops_execution_mode",
         "rcj_ops_ssh_host",
+        "new_listing_account_id",
         "signal_group_id",
         "log_level",
         mode="before",
@@ -74,6 +87,19 @@ class Settings(BaseSettings):
     @field_validator("signal_group_cache_path", mode="before")
     @classmethod
     def strip_path_env_quotes(cls, value: object) -> object:
+        if not isinstance(value, str):
+            return value
+        return Path(_strip_outer_quotes(value))
+
+    @field_validator(
+        "new_listing_config_dir",
+        "new_listing_logs_dir",
+        "new_listing_gateway_symbols_path",
+        "new_listing_trading_volume_path",
+        mode="before",
+    )
+    @classmethod
+    def strip_new_listing_path_env_quotes(cls, value: object) -> object:
         if not isinstance(value, str):
             return value
         return Path(_strip_outer_quotes(value))

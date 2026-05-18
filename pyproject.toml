@@ -17,6 +17,7 @@ dependencies = [
 
 [project.scripts]
 signal_bot = "ops_bot.scripts.signal_bot:main"
+new_listing = "ops_bot.scripts.new_listing:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]

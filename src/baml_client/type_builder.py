@@ -20,7 +20,7 @@ from .globals import DO_NOT_USE_DIRECTLY_UNLESS_YOU_KNOW_WHAT_YOURE_DOING_RUNTIM
 class TypeBuilder(type_builder.TypeBuilder):
     def __init__(self):
         super().__init__(classes=set(
-          ["BalanceExtraction","HealthExtraction","MonitorExtraction","StackerStatusExtraction","TransferExtraction","VolumeFillsExtraction",]
+          ["BalanceExtraction","HealthExtraction","MonitorExtraction","NewListingExtraction","StackerStatusExtraction","TransferExtraction","VolumeFillsExtraction",]
         ), enums=set(
           []
         ), runtime=DO_NOT_USE_DIRECTLY_UNLESS_YOU_KNOW_WHAT_YOURE_DOING_RUNTIME)
@@ -31,7 +31,7 @@ class TypeBuilder(type_builder.TypeBuilder):
 
 
     # #########################################################################
-    # Generated classes 6
+    # Generated classes 7
     # #########################################################################
 
     @property
@@ -45,6 +45,10 @@ class TypeBuilder(type_builder.TypeBuilder):
     @property
     def MonitorExtraction(self) -> "MonitorExtractionViewer":
         return MonitorExtractionViewer(self)
+
+    @property
+    def NewListingExtraction(self) -> "NewListingExtractionViewer":
+        return NewListingExtractionViewer(self)
 
     @property
     def StackerStatusExtraction(self) -> "StackerStatusExtractionViewer":
@@ -66,7 +70,7 @@ class TypeBuilder(type_builder.TypeBuilder):
 
 
 # #########################################################################
-# Generated classes 6
+# Generated classes 7
 # #########################################################################
 
 class BalanceExtractionAst:
@@ -198,6 +202,77 @@ class MonitorExtractionProperties:
     @property
     def update_time(self) -> type_builder.ClassPropertyViewer:
         return type_builder.ClassPropertyViewer(self.__bldr.property("update_time"))
+    
+    @property
+    def missing_fields(self) -> type_builder.ClassPropertyViewer:
+        return type_builder.ClassPropertyViewer(self.__bldr.property("missing_fields"))
+    
+    
+
+
+class NewListingExtractionAst:
+    def __init__(self, tb: type_builder.TypeBuilder):
+        _tb = tb._tb # type: ignore (we know how to use this private attribute)
+        self._bldr = _tb.class_("NewListingExtraction")
+        self._properties: typing.Set[str] = set([  "symbol",  "market",  "tier",  "price_decimals",  "quantity_decimals",  "feed_port",  "gateway_port",  "create_new_gate_way",  "missing_fields",  ])
+        self._props = NewListingExtractionProperties(self._bldr, self._properties)
+
+    def type(self) -> baml_py.FieldType:
+        return self._bldr.field()
+
+    @property
+    def props(self) -> "NewListingExtractionProperties":
+        return self._props
+
+
+class NewListingExtractionViewer(NewListingExtractionAst):
+    def __init__(self, tb: type_builder.TypeBuilder):
+        super().__init__(tb)
+
+    
+    def list_properties(self) -> typing.List[typing.Tuple[str, type_builder.ClassPropertyViewer]]:
+        return [(name, type_builder.ClassPropertyViewer(self._bldr.property(name))) for name in self._properties]
+    
+
+
+class NewListingExtractionProperties:
+    def __init__(self, bldr: baml_py.ClassBuilder, properties: typing.Set[str]):
+        self.__bldr = bldr
+        self.__properties = properties # type: ignore (we know how to use this private attribute) # noqa: F821
+
+    
+    
+    @property
+    def symbol(self) -> type_builder.ClassPropertyViewer:
+        return type_builder.ClassPropertyViewer(self.__bldr.property("symbol"))
+    
+    @property
+    def market(self) -> type_builder.ClassPropertyViewer:
+        return type_builder.ClassPropertyViewer(self.__bldr.property("market"))
+    
+    @property
+    def tier(self) -> type_builder.ClassPropertyViewer:
+        return type_builder.ClassPropertyViewer(self.__bldr.property("tier"))
+    
+    @property
+    def price_decimals(self) -> type_builder.ClassPropertyViewer:
+        return type_builder.ClassPropertyViewer(self.__bldr.property("price_decimals"))
+    
+    @property
+    def quantity_decimals(self) -> type_builder.ClassPropertyViewer:
+        return type_builder.ClassPropertyViewer(self.__bldr.property("quantity_decimals"))
+    
+    @property
+    def feed_port(self) -> type_builder.ClassPropertyViewer:
+        return type_builder.ClassPropertyViewer(self.__bldr.property("feed_port"))
+    
+    @property
+    def gateway_port(self) -> type_builder.ClassPropertyViewer:
+        return type_builder.ClassPropertyViewer(self.__bldr.property("gateway_port"))
+    
+    @property
+    def create_new_gate_way(self) -> type_builder.ClassPropertyViewer:
+        return type_builder.ClassPropertyViewer(self.__bldr.property("create_new_gate_way"))
     
     @property
     def missing_fields(self) -> type_builder.ClassPropertyViewer:

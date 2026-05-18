@@ -12,6 +12,7 @@ from typing import Any
 import websocket
 
 from ops_bot.clients.signal import SignalClient
+from ops_bot.responses import BotResponse
 from ops_bot.service import handle_user_message
 from ops_bot.settings import app_settings
 from ops_bot.signal_groups import SignalGroupIdCache
@@ -217,15 +218,18 @@ def _text_for_handling(payload: dict[str, Any]) -> str | None:
     return _strip_bot_mentions(text) or None
 
 
-def _send_reply(message: str, payload: dict[str, Any]) -> None:
+def _send_reply(message: str | BotResponse, payload: dict[str, Any]) -> None:
     target = _reply_target(payload)
     if not target["recipient"] and not target["group_id"]:
         logger.warning(
             "Skipping reply because no Signal recipient or group id was found."
         )
         return
+    text = message.message if isinstance(message, BotResponse) else message
+    attachments = message.attachments if isinstance(message, BotResponse) else None
     SignalClient().send(
-        message,
+        text,
+        attachments=attachments,
         recipient=target["recipient"],
         group_id=target["group_id"],
     )

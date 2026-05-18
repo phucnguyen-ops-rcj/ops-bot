@@ -4,12 +4,14 @@ from dataclasses import dataclass
 from typing import Literal
 
 AgentName = Literal[
+    "help",
     "health",
     "balance",
     "transfer",
     "monitor",
     "volume_fills",
     "stacker_status",
+    "new_listing",
 ]
 
 
@@ -20,7 +22,20 @@ class RoutedMessage:
     command: str | None = None
 
 
+COMMAND_HELP: tuple[str, ...] = (
+    "/help -> list bot commands",
+    "/health, /ping -> API health check",
+    "/balance, /bal -> get balance",
+    "/transfer, /move, /withdraw -> run transfer",
+    "/monitor, /watch -> run monitor",
+    "/volume-fills -> get volume strategy fills",
+    "/stacker-status -> check stacker accepted orders",
+    "/new-listing -> create config and run new-listing workflow",
+    "/new-listing-dryrun -> create config and run dry-run preview",
+)
+
 COMMAND_ALIASES: dict[str, AgentName] = {
+    "/help": "help",
     "/health": "health",
     "/ping": "health",
     "/balance": "balance",
@@ -32,7 +47,12 @@ COMMAND_ALIASES: dict[str, AgentName] = {
     "/watch": "monitor",
     "/volume-fills": "volume_fills",
     "/stacker-status": "stacker_status",
+    "/new-listing": "new_listing",
+    "/new-listing-dryrun": "new_listing",
 }
+
+NEW_LISTING_DRYRUN_COMMANDS = frozenset({"/new-listing-dryrun"})
+NEW_LISTING_TEMPLATE_COMMANDS = frozenset({"/new-listing", *NEW_LISTING_DRYRUN_COMMANDS})
 
 
 def route_message(text: str) -> RoutedMessage | None:
@@ -48,6 +68,8 @@ def route_message(text: str) -> RoutedMessage | None:
             question=rest.strip() or stripped,
             command=command,
         )
+    if command.startswith("/"):
+        return None
 
     lower = stripped.lower()
     if any(phrase in lower for phrase in ("server up", "health", "ping api", "ping the api")):
@@ -90,5 +112,13 @@ def route_message(text: str) -> RoutedMessage | None:
         )
     ):
         return RoutedMessage(agent="stacker_status", question=stripped)
+
+    if any(
+        phrase in lower for phrase in ("new listing", "new-listing", "newlisting")
+    ):
+        return RoutedMessage(agent="new_listing", question=stripped)
+
+    if any(phrase in lower for phrase in ("help", "commands", "what can you do")):
+        return RoutedMessage(agent="help", question=stripped)
 
     return None

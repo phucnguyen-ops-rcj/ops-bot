@@ -41,6 +41,12 @@ class LlmResponseParser:
         __result__ = self.__options.merge_options(baml_options).parse_response(function_name="ExtractMonitorRequest", llm_response=llm_response, mode="request")
         return typing.cast(types.MonitorExtraction, __result__)
 
+    def ExtractNewListingRequest(
+        self, llm_response: str, baml_options: BamlCallOptions = {},
+    ) -> types.NewListingExtraction:
+        __result__ = self.__options.merge_options(baml_options).parse_response(function_name="ExtractNewListingRequest", llm_response=llm_response, mode="request")
+        return typing.cast(types.NewListingExtraction, __result__)
+
     def ExtractStackerStatusRequest(
         self, llm_response: str, baml_options: BamlCallOptions = {},
     ) -> types.StackerStatusExtraction:
@@ -84,6 +90,12 @@ class LlmStreamParser:
     ) -> stream_types.MonitorExtraction:
         __result__ = self.__options.merge_options(baml_options).parse_response(function_name="ExtractMonitorRequest", llm_response=llm_response, mode="stream")
         return typing.cast(stream_types.MonitorExtraction, __result__)
+
+    def ExtractNewListingRequest(
+        self, llm_response: str, baml_options: BamlCallOptions = {},
+    ) -> stream_types.NewListingExtraction:
+        __result__ = self.__options.merge_options(baml_options).parse_response(function_name="ExtractNewListingRequest", llm_response=llm_response, mode="stream")
+        return typing.cast(stream_types.NewListingExtraction, __result__)
 
     def ExtractStackerStatusRequest(
         self, llm_response: str, baml_options: BamlCallOptions = {},

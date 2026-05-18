@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+from pathlib import Path
+
+from ops_bot.responses import BotResponse
 from ops_bot.scripts import signal_bot
 
 
@@ -52,6 +55,36 @@ def test_reply_target_uses_sendable_group_id_from_payload() -> None:
         "recipient": None,
         "group_id": "group.123",
     }
+
+
+def test_send_reply_passes_attachments(monkeypatch, tmp_path) -> None:
+    sent: dict = {}
+    attachment = tmp_path / "config.json"
+    attachment.write_text("{}", encoding="utf-8")
+
+    def fake_send(
+        _self,
+        message,
+        *,
+        attachments=None,
+        recipient=None,
+        group_id=None,
+    ) -> dict:
+        sent["message"] = message
+        sent["attachments"] = attachments
+        sent["recipient"] = recipient
+        sent["group_id"] = group_id
+        return {"success": True}
+
+    monkeypatch.setattr(signal_bot.SignalClient, "send", fake_send)
+
+    signal_bot._send_reply(
+        BotResponse(message="done", attachments=(attachment,)),
+        _payload("ok"),
+    )
+
+    assert sent["message"] == "done"
+    assert sent["attachments"] == (attachment,)
 
 
 def test_reply_target_uses_configured_group_id_for_receive_only_group_id(

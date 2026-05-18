@@ -17,6 +17,17 @@ Prefer slash commands because routing is deterministic:
 /monitor every 10 seconds
 /volume-fills KAIO
 /stacker-status KAIO-USDT
+/help
+/new-listing
+/new-listing-dryrun
+symbol: ATWO
+market: spot
+tier: C
+create_new_gate_way: false
+price decimals: 5
+quantity decimals: 1
+feed port: 41739
+gateway port: 45704
 ```
 
 Keyword routing also exists for health, balance, transfer, monitor,
@@ -26,6 +37,21 @@ Keyword routing also exists for health, balance, transfer, monitor,
 `base_currency`/`quote_currency` derived from the symbol. `/stacker-status`
 posts to `/get_stacker_accepted_orders` using the normalized symbol. Both
 accept an optional `date` in `YYYYMMDD` format.
+
+`/new-listing` prepares the generated config under `.docker-data/new_listing/config`
+locally or `/data/new_listing/config` in Docker, updates the matching
+`gateway_symbols.yml` and `trading_volume.json` in the same shared data root,
+then runs the workflow in real mode.
+`/new-listing-dryrun` does the same setup work but runs the workflow in dry-run
+mode for verification. After either command, the bot sends the generated config
+file and run log file back to Signal as attachments. `/help` lists all supported bot commands. Run the
+generated config manually with:
+
+```bash
+uv run new_listing ATWO --dry-run
+uv run new_listing ATWO --execution-mode ssh
+uv run new_listing ATWO --execution-mode local
+```
 
 ## Setup
 
@@ -90,7 +116,8 @@ docker restart rcj-ops-bot
 `SIGNAL_BASE_URL` uses `host.docker.internal` so the container can reach the
 Signal REST API running on the host. The SSH mount is needed when
 `RCJ_OPS_EXECUTION_MODE=ssh`. The `/data` mount persists the group-id cache
-between container runs.
+between container runs. New-listing generated config, logs, gateway symbols,
+and trading-volume state also live under that same `/data/new_listing` tree.
 
 ## Receive Modes
 

@@ -37,6 +37,24 @@ def test_route_stacker_status_keyword() -> None:
     assert routed.agent == "stacker_status"
 
 
+def test_route_new_listing_slash_command() -> None:
+    routed = route_message("/new-listing symbol: ATWO")
+
+    assert routed is not None
+    assert routed.agent == "new_listing"
+
+
+def test_route_help_slash_command() -> None:
+    routed = route_message("/help")
+
+    assert routed is not None
+    assert routed.agent == "help"
+
+
+def test_removed_newlisting_alias_no_longer_routes() -> None:
+    assert route_message("/newlisting") is None
+
+
 def test_build_balance_call_defaults_token_and_account() -> None:
     call = build_ops_call("balance", {"exchange": "kucoin", "missing_fields": []})
 

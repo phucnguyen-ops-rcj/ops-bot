@@ -41,7 +41,7 @@ def all_succeeded(checks: typing.Dict[CheckName, Check]) -> bool:
 # #########################################################################
 
 # #########################################################################
-# Generated classes (6)
+# Generated classes (7)
 # #########################################################################
 
 class BalanceExtraction(BaseModel):
@@ -56,6 +56,17 @@ class HealthExtraction(BaseModel):
 
 class MonitorExtraction(BaseModel):
     update_time: typing.Optional[int] = None
+    missing_fields: typing.List[str]
+
+class NewListingExtraction(BaseModel):
+    symbol: typing.Optional[str] = None
+    market: typing.Optional[str] = None
+    tier: typing.Optional[str] = None
+    price_decimals: typing.Optional[int] = None
+    quantity_decimals: typing.Optional[int] = None
+    feed_port: typing.Optional[int] = None
+    gateway_port: typing.Optional[int] = None
+    create_new_gate_way: typing.Optional[bool] = None
     missing_fields: typing.List[str]
 
 class StackerStatusExtraction(BaseModel):
