@@ -6,6 +6,8 @@ import subprocess
 import urllib.error
 import urllib.request
 from dataclasses import dataclass
+from datetime import datetime, timezone
+from pathlib import Path
 from typing import Any, Literal
 
 from ops_bot.settings import get_settings
@@ -71,11 +73,35 @@ class OpsApiClient:
         authenticated: bool = True,
     ) -> OpsApiResponse:
         request_payload = payload or {}
-        if self.execution_mode == "ssh":
-            return self._request_via_ssh(
-                method, endpoint, request_payload, authenticated
+        try:
+            if self.execution_mode == "ssh":
+                response = self._request_via_ssh(
+                    method, endpoint, request_payload, authenticated
+                )
+            else:
+                response = self._request_local(
+                    method, endpoint, request_payload, authenticated
+                )
+        except Exception as exc:
+            self._append_ops_log(
+                method=method,
+                endpoint=endpoint,
+                payload=request_payload,
+                authenticated=authenticated,
+                status=0,
+                body=f"request failed: {exc}",
             )
-        return self._request_local(method, endpoint, request_payload, authenticated)
+            raise
+
+        self._append_ops_log(
+            method=method,
+            endpoint=response.endpoint,
+            payload=request_payload,
+            authenticated=authenticated,
+            status=response.status,
+            body=response.body,
+        )
+        return response
 
     def _request_local(
         self,
@@ -182,6 +208,35 @@ class OpsApiClient:
             body=body.strip(),
             payload=payload,
         )
+
+    def _append_ops_log(
+        self,
+        *,
+        method: str,
+        endpoint: str,
+        payload: dict[str, Any],
+        authenticated: bool,
+        status: int,
+        body: str,
+    ) -> Path:
+        log_path = get_settings().ops_api_log_path
+        log_path.parent.mkdir(parents=True, exist_ok=True)
+        with log_path.open("a", encoding="utf-8") as file:
+            file.write(f"[{datetime.now(timezone.utc).isoformat()}]\n")
+            file.write(f"method: {method}\n")
+            file.write(f"endpoint: /{endpoint.lstrip('/')}\n")
+            file.write(f"execution_mode: {self.execution_mode}\n")
+            file.write(f"authenticated: {authenticated}\n")
+            file.write(f"status: {status}\n")
+            file.write("payload:\n")
+            file.write(json.dumps(payload, indent=2, sort_keys=True))
+            file.write("\n")
+            file.write("output:\n")
+            file.write(body.rstrip())
+            file.write("\n")
+            file.write("=" * 80)
+            file.write("\n")
+        return log_path
 
 
 def normalize_symbol(symbol: str, quote_ccy: str = "USDT") -> str:

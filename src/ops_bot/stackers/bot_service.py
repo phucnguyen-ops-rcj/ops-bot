@@ -33,14 +33,14 @@ SETUP_STACKERS_INPUT_TEMPLATE = """{
     "max_price": 0.02,
     "min_quantity": 500,
     "max_quantity": 5000,
-    "count": 3
+    "count": 50
   },
   "sell": {
     "min_price": 0.5,
     "max_price": 1.75,
     "min_quantity": 75,
     "max_quantity": 500,
-    "count": 3
+    "count": 50
   }
 }"""
 

@@ -44,6 +44,7 @@ class Settings(BaseSettings):
     rcj_ops_timeout_seconds: int = Field(default=60)
     rcj_ops_execution_mode: Literal["ssh", "local"] = Field(default="ssh")
     rcj_ops_ssh_host: str = Field(default="T1_newuser1")
+    ops_api_log_path: Path = Field(default=DEFAULT_DATA_ROOT / "ops_api.log")
 
     # New listing
     new_listing_config_dir: Path = Field(
@@ -100,6 +101,7 @@ class Settings(BaseSettings):
         "new_listing_trading_volume_path",
         "stacker_config_dir",
         "stacker_logs_dir",
+        "ops_api_log_path",
         mode="before",
     )
     @classmethod
