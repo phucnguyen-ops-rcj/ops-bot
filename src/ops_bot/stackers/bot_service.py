@@ -282,17 +282,32 @@ def _generate_stackers(
     quantity_decimals: int,
 ) -> list[dict[str, str]]:
     entries: list[dict[str, str]] = []
-    for _ in range(side.count):
+    seen: set[tuple[str, str]] = set()
+    max_attempts = max(side.count * 20, 100)
+    attempts = 0
+    while len(entries) < side.count:
+        attempts += 1
+        if attempts > max_attempts:
+            raise ValueError(
+                "Could not generate enough unique stackers for the requested count. "
+                "Widen the price/quantity ranges or reduce count."
+            )
         price = _random_decimal(side.min_price, side.max_price, price_decimals)
         quantity = _random_decimal(
             side.min_quantity,
             side.max_quantity,
             quantity_decimals,
         )
+        formatted_price = _format_decimal(price, price_decimals)
+        formatted_quantity = _format_decimal(quantity, quantity_decimals)
+        key = (formatted_price, formatted_quantity)
+        if key in seen:
+            continue
+        seen.add(key)
         entries.append(
             {
-                "price": _format_decimal(price, price_decimals),
-                "original_quantity": _format_decimal(quantity, quantity_decimals),
+                "price": formatted_price,
+                "original_quantity": formatted_quantity,
             }
         )
     return sorted(entries, key=lambda entry: Decimal(entry["price"]), reverse=True)

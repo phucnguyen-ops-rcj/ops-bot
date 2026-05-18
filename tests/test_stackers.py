@@ -179,3 +179,134 @@ def test_setup_stackers_executes_api_in_real_mode(
     assert "dry_run: False" in log_text
     assert "response_status: 200" in log_text
     assert '{"status":"ok"}' in log_text
+
+
+def test_setup_stackers_removes_duplicate_random_entries(
+    monkeypatch,
+    tmp_path,
+) -> None:
+    config_dir = tmp_path / "stackers" / "config"
+    logs_dir = tmp_path / "stackers" / "logs"
+    monkeypatch.setattr(
+        "ops_bot.stackers.bot_service.app_settings.stacker_config_dir",
+        config_dir,
+    )
+    monkeypatch.setattr(
+        "ops_bot.stackers.bot_service.app_settings.stacker_logs_dir",
+        logs_dir,
+    )
+
+    values = iter(
+        [
+            0.10,
+            0.20,
+            0.10,
+            0.20,
+            0.50,
+            0.30,
+            0.50,
+            0.30,
+            0.50,
+            0.30,
+            0.80,
+            0.40,
+        ]
+    )
+    monkeypatch.setattr(
+        "ops_bot.stackers.bot_service.random.random",
+        lambda: next(values),
+    )
+
+    message = """/setup-stackers-dryrun
+{
+  "base_ccy": "SHARE",
+  "quote_ccy": "USDT",
+  "market": "spot",
+  "exchanges": "kucoin",
+  "feed_host": "0.0.0.0:41740",
+  "gateway_host": "0.0.0.0:41799",
+  "general": {
+    "price_decimals": 5,
+    "quantity_step_decimals": 1,
+    "min_price": 0.00001,
+    "max_price": 1.75,
+    "min_order_quantity": 10,
+    "max_quantity": 100000000000
+  },
+  "buy": {
+    "min_price": 0.00001,
+    "max_price": 0.02,
+    "min_quantity": 500,
+    "max_quantity": 5000,
+    "count": 2
+  },
+  "sell": {
+    "min_price": 0.5,
+    "max_price": 1.75,
+    "min_quantity": 75,
+    "max_quantity": 500,
+    "count": 2
+  }
+}"""
+
+    response = asyncio.run(handle_user_message(message))
+
+    assert isinstance(response, BotResponse)
+    body = json.loads(response.message)
+    assert body["buy_stackers"] == (
+        "[{price: 0.01001 original_quantity: 1850.0000},"
+        "{price: 0.00201 original_quantity: 1400.0000}]"
+    )
+    assert body["sell_stackers"] == (
+        "[{price: 1.50000 original_quantity: 245.0000},"
+        "{price: 1.12500 original_quantity: 202.5000}]"
+    )
+
+
+def test_setup_stackers_fails_when_unique_count_is_impossible(
+    monkeypatch,
+) -> None:
+    monkeypatch.setattr(
+        "ops_bot.stackers.bot_service.random.random",
+        lambda: 0.10,
+    )
+
+    message = """/setup-stackers-dryrun
+{
+  "base_ccy": "SHARE",
+  "quote_ccy": "USDT",
+  "market": "spot",
+  "exchanges": "kucoin",
+  "feed_host": "0.0.0.0:41740",
+  "gateway_host": "0.0.0.0:41799",
+  "general": {
+    "price_decimals": 5,
+    "quantity_step_decimals": 1,
+    "min_price": 0.00001,
+    "max_price": 1.75,
+    "min_order_quantity": 10,
+    "max_quantity": 100000000000
+  },
+  "buy": {
+    "min_price": 0.00001,
+    "max_price": 0.00001,
+    "min_quantity": 500,
+    "max_quantity": 500,
+    "count": 2
+  },
+  "sell": {
+    "min_price": 0.5,
+    "max_price": 0.5,
+    "min_quantity": 75,
+    "max_quantity": 75,
+    "count": 1
+  }
+}"""
+
+    response = asyncio.run(handle_user_message(message))
+
+    assert (
+        response
+        == "Could not generate enough unique stackers for the requested count. "
+        "Widen the price/quantity ranges or reduce count."
+    )
