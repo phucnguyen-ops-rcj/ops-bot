@@ -226,7 +226,11 @@ def _send_reply(message: str | BotResponse, payload: dict[str, Any]) -> None:
         )
         return
     text = message.message if isinstance(message, BotResponse) else message
-    attachments = message.attachments if isinstance(message, BotResponse) else None
+    attachments = (
+        message.attachments or None
+        if isinstance(message, BotResponse)
+        else None
+    )
     SignalClient().send(
         text,
         attachments=attachments,

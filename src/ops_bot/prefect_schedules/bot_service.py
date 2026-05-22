@@ -437,7 +437,6 @@ def handle_schedule_prefect_command(question: str, *, command: str | None) -> Bo
         )
         raise
 
-    request_path = save_schedule_request(record)
     state_path = save_schedule_state(record)
     log_path = save_schedule_log(
         schedule_type=record["schedule_type"],
@@ -451,16 +450,7 @@ def handle_schedule_prefect_command(question: str, *, command: str | None) -> Bo
         },
     )
     message = _build_schedule_message(record)
-    return BotResponse(message=message, attachments=(request_path, state_path))
-
-
-def save_schedule_request(record: dict[str, Any]) -> Path:
-    config_dir = app_settings.prefect_schedule_config_dir
-    config_dir.mkdir(parents=True, exist_ok=True)
-    path = config_dir / f"{record['schedule_type']}_{record['symbol'].upper()}.json"
-    path.write_text(json.dumps(record, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
-    return path
-
+    return BotResponse(message=message)
 
 def save_schedule_state(record: dict[str, Any]) -> Path:
     state_dir = app_settings.prefect_schedule_state_dir
@@ -534,26 +524,16 @@ def _remove_schedules(payload: dict[str, Any]) -> BotResponse:
 
 def _build_schedule_message(record: dict[str, Any]) -> str:
     flow_run_ids = [flow_run["id"] for flow_run in record["flow_runs"] if flow_run.get("id")]
-    lines = [
-        f"Created scheduled Prefect runs for `{record['schedule_type']}`.",
-        f"schedule_ref: {record['schedule_ref']}",
-        f"symbol: {record['symbol']}",
-        f"requested_time: {record['requested_time_local']} ({app_settings.prefect_timezone})",
-    ]
+    lines = ["flow_run_ids:"]
     if flow_run_ids:
-        lines.extend(
-            [
-                "flow_run_ids:",
-                json.dumps(flow_run_ids, ensure_ascii=False),
-            ]
-        )
+        lines.append(f"  {json.dumps(flow_run_ids, ensure_ascii=False)}")
     if record["schedule_type"] == "stacker" and len(record["flow_runs"]) == 4:
         interval = record.get("stacker_interval_minutes", 10)
         lines.append(f"Created 4 one-time stacker runs at {interval}-minute intervals for levels 1 to 4.")
     if record["schedule_type"] == "new_listing":
         lines.append("Created stacker levels 1-4, then volume, then mirror based on the requested start time.")
     for index, flow_run in enumerate(record["flow_runs"], start=1):
-        line = f"{index}. run_id={flow_run.get('id')} kind={flow_run.get('kind')} state={flow_run.get('state_type')}"
+        line = f"  {index}. run_id={flow_run.get('id')} kind={flow_run.get('kind')} state={flow_run.get('state_type')}"
         if flow_run.get("stacker_level") is not None:
             line += f" level={flow_run['stacker_level']}"
         if flow_run.get("scheduled_time"):
@@ -561,7 +541,7 @@ def _build_schedule_message(record: dict[str, Any]) -> str:
         lines.append(line)
         if app_settings.prefect_ui_url and flow_run.get("id"):
             lines.append(
-                f"   {app_settings.prefect_ui_url.rstrip('/')}/flow-runs/flow-run/{flow_run['id']}"
+                f"     {app_settings.prefect_ui_url.rstrip('/')}/flow-runs/flow-run/{flow_run['id']}"
             )
     return "\n".join(lines)
 

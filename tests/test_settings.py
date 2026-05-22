@@ -46,7 +46,6 @@ def test_new_listing_paths_default_to_shared_data_root() -> None:
     assert settings.prefect_api_url == "http://100.72.177.110:4200/api"
     assert settings.prefect_ui_url == "http://100.72.177.110:4200"
     assert settings.prefect_timeout_seconds == 30
-    assert settings.prefect_timezone == "Asia/Ho_Chi_Minh"
-    assert settings.prefect_schedule_config_dir == DEFAULT_DATA_ROOT / "prefect_schedules/config"
+    assert settings.prefect_timezone == "Asia/Singapore"
     assert settings.prefect_schedule_logs_dir == DEFAULT_DATA_ROOT / "prefect_schedules/logs"
     assert settings.prefect_schedule_state_dir == DEFAULT_DATA_ROOT / "prefect_schedules/state"

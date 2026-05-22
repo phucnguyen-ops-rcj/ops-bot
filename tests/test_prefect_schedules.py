@@ -26,13 +26,8 @@ def test_remove_schedules_template_response() -> None:
 
 
 def test_schedule_stacker_batch_run(monkeypatch, tmp_path: Path) -> None:
-    config_dir = tmp_path / "prefect_schedules" / "config"
     logs_dir = tmp_path / "prefect_schedules" / "logs"
     state_dir = tmp_path / "prefect_schedules" / "state"
-    monkeypatch.setattr(
-        "ops_bot.prefect_schedules.bot_service.app_settings.prefect_schedule_config_dir",
-        config_dir,
-    )
     monkeypatch.setattr(
         "ops_bot.prefect_schedules.bot_service.app_settings.prefect_schedule_logs_dir",
         logs_dir,
@@ -90,7 +85,7 @@ def test_schedule_stacker_batch_run(monkeypatch, tmp_path: Path) -> None:
 
     response = asyncio.run(
         handle_user_message(
-            """/schedule-stacker
+            """/schedule-stackers
 {
   "symbol": "BILL",
   "scheduled_time": "2099-05-22 09:30",
@@ -108,26 +103,21 @@ def test_schedule_stacker_batch_run(monkeypatch, tmp_path: Path) -> None:
         "2099-05-22 09:44",
         "2099-05-22 09:51",
     ]
-    assert 'flow_run_ids:\n["flow-run-1", "flow-run-2", "flow-run-3", "flow-run-4"]' in response.message
+    assert 'flow_run_ids:\n  ["flow-run-1", "flow-run-2", "flow-run-3", "flow-run-4"]' in response.message
     assert "Created 4 one-time stacker runs at 7-minute intervals for levels 1 to 4." in response.message
-    assert "level=1" in response.message
-    assert "level=4" in response.message
-    assert len(response.attachments) == 2
+    assert "  1. run_id=flow-run-1 kind=stacker state=SCHEDULED level=1 time=2099-05-22 09:30" in response.message
+    assert "  4. run_id=flow-run-4 kind=stacker state=SCHEDULED level=4 time=2099-05-22 09:51" in response.message
+    assert response.attachments == ()
 
-    request_path = config_dir / "stacker_BILL.json"
-    assert request_path.exists()
-    saved_request = json.loads(request_path.read_text(encoding="utf-8"))
-    assert saved_request["stacker_interval_minutes"] == 7
+    state_files = list(state_dir.glob("stacker-BILL-*.json"))
+    assert len(state_files) == 1
+    saved_state = json.loads(state_files[0].read_text(encoding="utf-8"))
+    assert saved_state["stacker_interval_minutes"] == 7
 
 
 def test_schedule_new_listing_creates_staggered_runs(monkeypatch, tmp_path: Path) -> None:
-    config_dir = tmp_path / "prefect_schedules" / "config"
     logs_dir = tmp_path / "prefect_schedules" / "logs"
     state_dir = tmp_path / "prefect_schedules" / "state"
-    monkeypatch.setattr(
-        "ops_bot.prefect_schedules.bot_service.app_settings.prefect_schedule_config_dir",
-        config_dir,
-    )
     monkeypatch.setattr(
         "ops_bot.prefect_schedules.bot_service.app_settings.prefect_schedule_logs_dir",
         logs_dir,
@@ -197,7 +187,7 @@ def test_schedule_new_listing_creates_staggered_runs(monkeypatch, tmp_path: Path
         "2099-05-22 07:00",
     ]
     assert [call["parameters"].get("stacker_level") for call in calls[:4]] == [1, 2, 3, 4]
-    assert 'flow_run_ids:\n["run-1", "run-2", "run-3", "run-4", "run-5", "run-6"]' in response.message
+    assert 'flow_run_ids:\n  ["run-1", "run-2", "run-3", "run-4", "run-5", "run-6"]' in response.message
     assert "kind=volume" in response.message
     assert "kind=mirror" in response.message
 

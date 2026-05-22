@@ -87,6 +87,31 @@ def test_send_reply_passes_attachments(monkeypatch, tmp_path) -> None:
     assert sent["attachments"] == (attachment,)
 
 
+def test_send_reply_omits_empty_attachments(monkeypatch) -> None:
+    sent: dict = {}
+
+    def fake_send(
+        _self,
+        message,
+        *,
+        attachments=None,
+        recipient=None,
+        group_id=None,
+    ) -> dict:
+        sent["message"] = message
+        sent["attachments"] = attachments
+        sent["recipient"] = recipient
+        sent["group_id"] = group_id
+        return {"success": True}
+
+    monkeypatch.setattr(signal_bot.SignalClient, "send", fake_send)
+
+    signal_bot._send_reply(BotResponse(message="removed"), _payload("ok"))
+
+    assert sent["message"] == "removed"
+    assert sent["attachments"] is None
+
+
 def test_reply_target_uses_configured_group_id_for_receive_only_group_id(
     monkeypatch,
 ) -> None:
