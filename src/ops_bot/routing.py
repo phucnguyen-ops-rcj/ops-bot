@@ -55,7 +55,7 @@ COMMAND_ALIASES: dict[str, AgentName] = {
     "/monitor": "monitor",
     "/watch": "monitor",
     "/volume-fills": "volume_fills",
-    "/stacker-status": "stacker_status",
+    "/stackers-status": "stacker_status",
     "/new-listing": "new_listing",
     "/new-listing-dryrun": "new_listing",
     "/setup-stackers": "setup_stackers",

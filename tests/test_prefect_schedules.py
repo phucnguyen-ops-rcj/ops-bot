@@ -4,6 +4,7 @@ import asyncio
 import json
 from pathlib import Path
 
+from ops_bot.prefect_schedules.bot_service import PrefectApiClient, PrefectApiResponse
 from ops_bot.responses import BotResponse
 from ops_bot.service import handle_user_message
 
@@ -53,7 +54,7 @@ def test_schedule_stacker_batch_run(monkeypatch, tmp_path: Path) -> None:
             assert deployment_name == "stacker-launch"
             return {"id": "deployment-123"}
 
-        def create_flow_run(
+        def create_flow_run_with_response(
             self,
             deployment_id: str,
             *,
@@ -70,10 +71,17 @@ def test_schedule_stacker_batch_run(monkeypatch, tmp_path: Path) -> None:
                 }
             )
             level = parameters["stacker_level"]
-            return {
-                "id": f"flow-run-{level}",
-                "state_type": "SCHEDULED",
-            }
+            return (
+                {
+                    "id": f"flow-run-{level}",
+                    "state_type": "SCHEDULED",
+                },
+                {
+                    "endpoint": "/deployments/deployment-123/create_flow_run",
+                    "status": 201,
+                    "body": '{"id":"prefect-body"}',
+                },
+            )
 
     monkeypatch.setattr(
         "ops_bot.prefect_schedules.bot_service.PrefectApiClient",
@@ -100,6 +108,7 @@ def test_schedule_stacker_batch_run(monkeypatch, tmp_path: Path) -> None:
         "2099-05-22 09:44",
         "2099-05-22 09:51",
     ]
+    assert 'flow_run_ids:\n["flow-run-1", "flow-run-2", "flow-run-3", "flow-run-4"]' in response.message
     assert "Created 4 one-time stacker runs at 7-minute intervals for levels 1 to 4." in response.message
     assert "level=1" in response.message
     assert "level=4" in response.message
@@ -134,7 +143,7 @@ def test_schedule_new_listing_creates_staggered_runs(monkeypatch, tmp_path: Path
         def read_deployment_by_name(self, flow_name: str, deployment_name: str) -> dict[str, str]:
             return {"id": f"{deployment_name}-id"}
 
-        def create_flow_run(
+        def create_flow_run_with_response(
             self,
             deployment_id: str,
             *,
@@ -150,10 +159,17 @@ def test_schedule_new_listing_creates_staggered_runs(monkeypatch, tmp_path: Path
                     "parameters": parameters,
                 }
             )
-            return {
-                "id": f"run-{len(calls)}",
-                "state_type": "SCHEDULED",
-            }
+            return (
+                {
+                    "id": f"run-{len(calls)}",
+                    "state_type": "SCHEDULED",
+                },
+                {
+                    "endpoint": f"/deployments/{deployment_id}/create_flow_run",
+                    "status": 201,
+                    "body": '{"id":"prefect-body"}',
+                },
+            )
 
     monkeypatch.setattr(
         "ops_bot.prefect_schedules.bot_service.PrefectApiClient",
@@ -181,6 +197,7 @@ def test_schedule_new_listing_creates_staggered_runs(monkeypatch, tmp_path: Path
         "2099-05-22 07:00",
     ]
     assert [call["parameters"].get("stacker_level") for call in calls[:4]] == [1, 2, 3, 4]
+    assert 'flow_run_ids:\n["run-1", "run-2", "run-3", "run-4", "run-5", "run-6"]' in response.message
     assert "kind=volume" in response.message
     assert "kind=mirror" in response.message
 
@@ -195,8 +212,13 @@ def test_remove_schedules_accepts_explicit_flow_run_ids(monkeypatch, tmp_path: P
     deleted: list[str] = []
 
     class FakePrefectApiClient:
-        def delete_flow_run(self, flow_run_id: str) -> None:
+        def delete_flow_run_with_response(self, flow_run_id: str) -> tuple[bool, dict[str, object]]:
             deleted.append(flow_run_id)
+            return True, {
+                "endpoint": f"/flow_runs/{flow_run_id}",
+                "status": 200,
+                "body": "",
+            }
 
     monkeypatch.setattr(
         "ops_bot.prefect_schedules.bot_service.PrefectApiClient",
@@ -232,3 +254,60 @@ def test_schedule_rejects_past_time() -> None:
     )
 
     assert response == "scheduled_time must be in the future."
+
+
+def test_prefect_deployment_lookup_uses_name_endpoint(monkeypatch) -> None:
+    calls: list[str] = []
+
+    def fake_request(self, method: str, endpoint: str, payload=None) -> PrefectApiResponse:
+        calls.append(endpoint)
+        return PrefectApiResponse(
+            endpoint=endpoint,
+            status=200,
+            body='{"id":"deployment-123","name":"volume-start-strategy"}',
+        )
+
+    monkeypatch.setattr(PrefectApiClient, "_request", fake_request)
+
+    result = PrefectApiClient().read_deployment_by_name(
+        "Start Volume Strategy",
+        "volume-start-strategy",
+    )
+
+    assert result["id"] == "deployment-123"
+    assert calls == [
+        "/deployments/name/Start%20Volume%20Strategy/volume-start-strategy",
+    ]
+
+
+def test_schedule_logs_prefect_lookup_failure(monkeypatch, tmp_path: Path) -> None:
+    logs_dir = tmp_path / "prefect_schedules" / "logs"
+    monkeypatch.setattr(
+        "ops_bot.prefect_schedules.bot_service.app_settings.prefect_schedule_logs_dir",
+        logs_dir,
+    )
+
+    class FakePrefectApiClient:
+        def read_deployment_by_name(self, flow_name: str, deployment_name: str) -> dict[str, str]:
+            raise ValueError("deployment lookup failed with HTTP 404: Not Found")
+
+    monkeypatch.setattr(
+        "ops_bot.prefect_schedules.bot_service.PrefectApiClient",
+        FakePrefectApiClient,
+    )
+
+    response = asyncio.run(
+        handle_user_message(
+            """/schedule-volume
+{
+  "symbol": "KAIO",
+  "scheduled_time": "2099-05-22 09:30"
+}"""
+        )
+    )
+
+    assert response == "deployment lookup failed with HTTP 404: Not Found"
+    log_files = list(logs_dir.glob("volume_KAIO_*.log"))
+    assert len(log_files) == 1
+    log_text = log_files[0].read_text(encoding="utf-8")
+    assert '"error": "deployment lookup failed with HTTP 404: Not Found"' in log_text

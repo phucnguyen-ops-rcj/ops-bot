@@ -85,7 +85,7 @@ class PrefectApiClient:
         deployment_segment = urllib.parse.quote(deployment_name, safe="")
         response = self._request(
             "GET",
-            f"/flows/{flow_segment}/deployments/{deployment_segment}",
+            f"/deployments/name/{flow_segment}/{deployment_segment}",
         )
         if not response.ok:
             raise ValueError(_format_prefect_error(response, "deployment lookup failed"))
@@ -100,6 +100,24 @@ class PrefectApiClient:
         flow_run_name: str = "",
         idempotency_key: str = "",
     ) -> dict[str, Any]:
+        flow_run, _ = self.create_flow_run_with_response(
+            deployment_id,
+            scheduled_time=scheduled_time,
+            parameters=parameters,
+            flow_run_name=flow_run_name,
+            idempotency_key=idempotency_key,
+        )
+        return flow_run
+
+    def create_flow_run_with_response(
+        self,
+        deployment_id: str,
+        *,
+        scheduled_time: datetime,
+        parameters: dict[str, Any],
+        flow_run_name: str = "",
+        idempotency_key: str = "",
+    ) -> tuple[dict[str, Any], dict[str, Any]]:
         payload: dict[str, Any] = {
             "parameters": parameters,
             "state": {
@@ -120,15 +138,32 @@ class PrefectApiClient:
         )
         if not response.ok:
             raise ValueError(_format_prefect_error(response, "flow run creation failed"))
-        return _parse_json_object(response.body, "flow run creation response")
+        parsed = _parse_json_object(response.body, "flow run creation response")
+        return parsed, {
+            "endpoint": response.endpoint,
+            "status": response.status,
+            "body": response.body,
+        }
 
     def delete_flow_run(self, flow_run_id: str) -> None:
+        _, _ = self.delete_flow_run_with_response(flow_run_id)
+
+    def delete_flow_run_with_response(self, flow_run_id: str) -> tuple[bool, dict[str, Any]]:
         encoded_id = urllib.parse.quote(flow_run_id, safe="")
         response = self._request("DELETE", f"/flow_runs/{encoded_id}")
         if response.status == 404:
-            return
+            return False, {
+                "endpoint": response.endpoint,
+                "status": response.status,
+                "body": response.body,
+            }
         if not response.ok:
             raise ValueError(_format_prefect_error(response, "flow run deletion failed"))
+        return True, {
+            "endpoint": response.endpoint,
+            "status": response.status,
+            "body": response.body,
+        }
 
     def _request(
         self,
@@ -351,44 +386,56 @@ def schedule_template_for_command(command: str | None) -> str:
 def handle_schedule_prefect_command(question: str, *, command: str | None) -> BotResponse:
     payload = _extract_json_payload(question)
     schedule_type = _schedule_type_from_command(command)
-    if schedule_type == "remove":
-        return _remove_schedules(payload)
+    try:
+        if schedule_type == "remove":
+            return _remove_schedules(payload)
 
-    client = PrefectApiClient()
-    if schedule_type == "volume":
-        request = VolumeScheduleRequest.from_payload(payload)
-        record = _create_single_schedule_record(
-            client=client,
+        client = PrefectApiClient()
+        if schedule_type == "volume":
+            request = VolumeScheduleRequest.from_payload(payload)
+            record = _create_single_schedule_record(
+                client=client,
+                schedule_type=schedule_type,
+                command=command,
+                request=request,
+                flow_name=_DEPLOYMENTS["volume"][0],
+                deployment_name=_DEPLOYMENTS["volume"][1],
+            )
+        elif schedule_type == "mirror":
+            request = MirrorScheduleRequest.from_payload(payload)
+            record = _create_single_schedule_record(
+                client=client,
+                schedule_type=schedule_type,
+                command=command,
+                request=request,
+                flow_name=_DEPLOYMENTS["mirror"][0],
+                deployment_name=_DEPLOYMENTS["mirror"][1],
+            )
+        elif schedule_type == "new_listing":
+            request = NewListingScheduleRequest.from_payload(payload)
+            record, prefect_log = _create_new_listing_schedule_record(
+                client=client,
+                command=command,
+                request=request,
+            )
+        else:
+            request = StackerScheduleRequest.from_payload(payload)
+            record, prefect_log = _create_stacker_schedule_record(
+                client=client,
+                command=command,
+                request=request,
+            )
+        if schedule_type in {"volume", "mirror"}:
+            prefect_log = record.pop("_prefect_log")
+    except ValueError as exc:
+        save_schedule_log(
             schedule_type=schedule_type,
-            command=command,
-            request=request,
-            flow_name=_DEPLOYMENTS["volume"][0],
-            deployment_name=_DEPLOYMENTS["volume"][1],
+            symbol=_optional_text(payload.get("symbol")) or "UNKNOWN",
+            payload=payload,
+            request_body={"command": command},
+            response_body={"error": str(exc)},
         )
-    elif schedule_type == "mirror":
-        request = MirrorScheduleRequest.from_payload(payload)
-        record = _create_single_schedule_record(
-            client=client,
-            schedule_type=schedule_type,
-            command=command,
-            request=request,
-            flow_name=_DEPLOYMENTS["mirror"][0],
-            deployment_name=_DEPLOYMENTS["mirror"][1],
-        )
-    elif schedule_type == "new_listing":
-        request = NewListingScheduleRequest.from_payload(payload)
-        record = _create_new_listing_schedule_record(
-            client=client,
-            command=command,
-            request=request,
-        )
-    else:
-        request = StackerScheduleRequest.from_payload(payload)
-        record = _create_stacker_schedule_record(
-            client=client,
-            command=command,
-            request=request,
-        )
+        raise
 
     request_path = save_schedule_request(record)
     state_path = save_schedule_state(record)
@@ -397,7 +444,11 @@ def handle_schedule_prefect_command(question: str, *, command: str | None) -> Bo
         symbol=record["symbol"],
         payload=payload,
         request_body=record["request_body"],
-        response_body={"flow_runs": record["flow_runs"], "schedule_ref": record["schedule_ref"]},
+        response_body={
+            "flow_runs": record["flow_runs"],
+            "schedule_ref": record["schedule_ref"],
+            "prefect_responses": prefect_log,
+        },
     )
     message = _build_schedule_message(record)
     return BotResponse(message=message, attachments=(request_path, state_path))
@@ -454,15 +505,23 @@ def _remove_schedules(payload: dict[str, Any]) -> BotResponse:
     flow_run_ids = _required_flow_run_ids(payload)
     client = PrefectApiClient()
     removed: list[dict[str, Any]] = []
+    prefect_responses: list[dict[str, Any]] = []
     for flow_run_id in flow_run_ids:
-        client.delete_flow_run(flow_run_id)
+        deleted, prefect_response = client.delete_flow_run_with_response(flow_run_id)
         removed.append({"id": flow_run_id})
+        prefect_responses.append(
+            {
+                "flow_run_id": flow_run_id,
+                "deleted": deleted,
+                "prefect_response": prefect_response,
+            }
+        )
     log_path = save_schedule_log(
         schedule_type="remove",
         symbol="FLOW_RUNS",
         payload=payload,
         request_body={"flow_run_ids": flow_run_ids},
-        response_body={"removed_runs": removed},
+        response_body={"removed_runs": removed, "prefect_responses": prefect_responses},
     )
     lines = [
         "Removed scheduled Prefect runs.",
@@ -474,12 +533,20 @@ def _remove_schedules(payload: dict[str, Any]) -> BotResponse:
 
 
 def _build_schedule_message(record: dict[str, Any]) -> str:
+    flow_run_ids = [flow_run["id"] for flow_run in record["flow_runs"] if flow_run.get("id")]
     lines = [
         f"Created scheduled Prefect runs for `{record['schedule_type']}`.",
         f"schedule_ref: {record['schedule_ref']}",
         f"symbol: {record['symbol']}",
         f"requested_time: {record['requested_time_local']} ({app_settings.prefect_timezone})",
     ]
+    if flow_run_ids:
+        lines.extend(
+            [
+                "flow_run_ids:",
+                json.dumps(flow_run_ids, ensure_ascii=False),
+            ]
+        )
     if record["schedule_type"] == "stacker" and len(record["flow_runs"]) == 4:
         interval = record.get("stacker_interval_minutes", 10)
         lines.append(f"Created 4 one-time stacker runs at {interval}-minute intervals for levels 1 to 4.")
@@ -511,7 +578,7 @@ def _create_single_schedule_record(
     deployment = client.read_deployment_by_name(flow_name, deployment_name)
     deployment_id = _require_text(deployment, "id")
     parameters = request.deployment_parameters()
-    flow_run = client.create_flow_run(
+    flow_run, prefect_response = client.create_flow_run_with_response(
         deployment_id,
         scheduled_time=request.scheduled_time,
         parameters=parameters,
@@ -526,7 +593,7 @@ def _create_single_schedule_record(
             scheduled_time=request.scheduled_time,
         )
     ]
-    return _build_record(
+    record = _build_record(
         schedule_type=schedule_type,
         command=command,
         symbol=request.symbol,
@@ -543,6 +610,15 @@ def _create_single_schedule_record(
         },
         flow_runs=flow_runs,
     )
+    record["_prefect_log"] = [
+        {
+            "kind": schedule_type,
+            "deployment_name": deployment_name,
+            "flow_run_id": flow_run.get("id"),
+            "prefect_response": prefect_response,
+        }
+    ]
+    return record
 
 
 def _create_stacker_schedule_record(
@@ -550,7 +626,7 @@ def _create_stacker_schedule_record(
     client: PrefectApiClient,
     command: str | None,
     request: StackerScheduleRequest,
-) -> dict[str, Any]:
+) -> tuple[dict[str, Any], list[dict[str, Any]]]:
     flow_name, deployment_name = _DEPLOYMENTS["stacker"]
     deployment = client.read_deployment_by_name(flow_name, deployment_name)
     deployment_id = _require_text(deployment, "id")
@@ -558,10 +634,11 @@ def _create_stacker_schedule_record(
     interval_minutes = request.stacker_interval_minutes
     flow_runs: list[dict[str, Any]] = []
     deployments: list[dict[str, Any]] = []
+    prefect_log: list[dict[str, Any]] = []
     for offset, level in enumerate(levels):
         scheduled_time = request.scheduled_time + timedelta(minutes=offset * interval_minutes)
         parameters = request.deployment_parameters(stacker_level=level)
-        flow_run = client.create_flow_run(
+        flow_run, prefect_response = client.create_flow_run_with_response(
             deployment_id,
             scheduled_time=scheduled_time,
             parameters=parameters,
@@ -586,6 +663,15 @@ def _create_stacker_schedule_record(
                 "stacker_level": level,
             }
         )
+        prefect_log.append(
+            {
+                "kind": "stacker",
+                "deployment_name": deployment_name,
+                "flow_run_id": flow_run.get("id"),
+                "stacker_level": level,
+                "prefect_response": prefect_response,
+            }
+        )
     return _build_record(
         schedule_type="stacker",
         command=command,
@@ -594,7 +680,7 @@ def _create_stacker_schedule_record(
         request_body={"deployments": deployments},
         flow_runs=flow_runs,
         extra={"stacker_interval_minutes": interval_minutes},
-    )
+    ), prefect_log
 
 
 def _create_new_listing_schedule_record(
@@ -602,7 +688,7 @@ def _create_new_listing_schedule_record(
     client: PrefectApiClient,
     command: str | None,
     request: NewListingScheduleRequest,
-) -> dict[str, Any]:
+) -> tuple[dict[str, Any], list[dict[str, Any]]]:
     stacker_flow_name, stacker_deployment_name = _DEPLOYMENTS["stacker"]
     volume_flow_name, volume_deployment_name = _DEPLOYMENTS["volume"]
     mirror_flow_name, mirror_deployment_name = _DEPLOYMENTS["mirror"]
@@ -622,6 +708,7 @@ def _create_new_listing_schedule_record(
 
     flow_runs: list[dict[str, Any]] = []
     deployments: list[dict[str, Any]] = []
+    prefect_log: list[dict[str, Any]] = []
     for level in (1, 2, 3, 4):
         scheduled_time = request.scheduled_time + timedelta(
             minutes=(level - 1) * request.stacker_interval_minutes
@@ -635,7 +722,7 @@ def _create_new_listing_schedule_record(
             parameters["execution_mode"] = request.execution_mode
         if request.ssh_host:
             parameters["ssh_host"] = request.ssh_host
-        flow_run = client.create_flow_run(
+        flow_run, prefect_response = client.create_flow_run_with_response(
             stacker_deployment_id,
             scheduled_time=scheduled_time,
             parameters=parameters,
@@ -658,6 +745,15 @@ def _create_new_listing_schedule_record(
                 "stacker_level": level,
             }
         )
+        prefect_log.append(
+            {
+                "kind": "stacker",
+                "deployment_name": stacker_deployment_name,
+                "flow_run_id": flow_run.get("id"),
+                "stacker_level": level,
+                "prefect_response": prefect_response,
+            }
+        )
 
     volume_time = request.scheduled_time + timedelta(minutes=request.volume_delay_minutes)
     volume_parameters: dict[str, Any] = {
@@ -668,7 +764,7 @@ def _create_new_listing_schedule_record(
         volume_parameters["execution_mode"] = request.execution_mode
     if request.ssh_host:
         volume_parameters["ssh_host"] = request.ssh_host
-    volume_run = client.create_flow_run(
+    volume_run, volume_response = client.create_flow_run_with_response(
         volume_deployment_id,
         scheduled_time=volume_time,
         parameters=volume_parameters,
@@ -689,6 +785,14 @@ def _create_new_listing_schedule_record(
             "scheduled_time": volume_time.isoformat(),
         }
     )
+    prefect_log.append(
+        {
+            "kind": "volume",
+            "deployment_name": volume_deployment_name,
+            "flow_run_id": volume_run.get("id"),
+            "prefect_response": volume_response,
+        }
+    )
 
     mirror_time = request.scheduled_time + timedelta(minutes=request.mirror_delay_minutes)
     mirror_parameters: dict[str, Any] = {
@@ -704,7 +808,7 @@ def _create_new_listing_schedule_record(
         mirror_parameters["execution_mode"] = request.execution_mode
     if request.ssh_host:
         mirror_parameters["ssh_host"] = request.ssh_host
-    mirror_run = client.create_flow_run(
+    mirror_run, mirror_response = client.create_flow_run_with_response(
         mirror_deployment_id,
         scheduled_time=mirror_time,
         parameters=mirror_parameters,
@@ -725,6 +829,14 @@ def _create_new_listing_schedule_record(
             "scheduled_time": mirror_time.isoformat(),
         }
     )
+    prefect_log.append(
+        {
+            "kind": "mirror",
+            "deployment_name": mirror_deployment_name,
+            "flow_run_id": mirror_run.get("id"),
+            "prefect_response": mirror_response,
+        }
+    )
 
     return _build_record(
         schedule_type="new_listing",
@@ -734,7 +846,7 @@ def _create_new_listing_schedule_record(
         request_body={"deployments": deployments},
         flow_runs=flow_runs,
         extra={"stacker_interval_minutes": request.stacker_interval_minutes},
-    )
+    ), prefect_log
 
 
 def _build_record(
