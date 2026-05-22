@@ -58,6 +58,27 @@ def test_route_setup_stackers_slash_command() -> None:
     assert routed.agent == "setup_stackers"
 
 
+def test_route_schedule_stacker_slash_command() -> None:
+    routed = route_message('/schedule-stacker {"symbol":"BILL"}')
+
+    assert routed is not None
+    assert routed.agent == "schedule_prefect"
+
+
+def test_route_schedule_new_listing_slash_command() -> None:
+    routed = route_message('/schedule-new-listing {"symbol":"BILL"}')
+
+    assert routed is not None
+    assert routed.agent == "schedule_prefect"
+
+
+def test_route_remove_schedules_slash_command() -> None:
+    routed = route_message('/remove-schedules {"flow_run_id":"abc"}')
+
+    assert routed is not None
+    assert routed.agent == "schedule_prefect"
+
+
 def test_removed_newlisting_alias_no_longer_routes() -> None:
     assert route_message("/newlisting") is None
 

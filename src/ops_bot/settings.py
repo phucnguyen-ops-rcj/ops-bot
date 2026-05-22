@@ -60,6 +60,19 @@ class Settings(BaseSettings):
     new_listing_account_id: str = Field(default="ktfsmc15")
     stacker_config_dir: Path = Field(default=DEFAULT_DATA_ROOT / "stackers/config")
     stacker_logs_dir: Path = Field(default=DEFAULT_DATA_ROOT / "stackers/logs")
+    prefect_api_url: str = Field(default="http://100.72.177.110:4200/api")
+    prefect_ui_url: str = Field(default="http://100.72.177.110:4200")
+    prefect_timeout_seconds: int = Field(default=30)
+    prefect_timezone: str = Field(default="Asia/Ho_Chi_Minh")
+    prefect_schedule_config_dir: Path = Field(
+        default=DEFAULT_DATA_ROOT / "prefect_schedules/config"
+    )
+    prefect_schedule_logs_dir: Path = Field(
+        default=DEFAULT_DATA_ROOT / "prefect_schedules/logs"
+    )
+    prefect_schedule_state_dir: Path = Field(
+        default=DEFAULT_DATA_ROOT / "prefect_schedules/state"
+    )
 
     # Logging
     log_level: str = Field(default="INFO")
@@ -79,6 +92,10 @@ class Settings(BaseSettings):
         "new_listing_account_id",
         "signal_group_id",
         "log_level",
+        "prefect_api_url",
+        "prefect_ui_url",
+        "prefect_timeout_seconds",
+        "prefect_timezone",
         mode="before",
     )
     @classmethod
@@ -102,6 +119,9 @@ class Settings(BaseSettings):
         "stacker_config_dir",
         "stacker_logs_dir",
         "ops_api_log_path",
+        "prefect_schedule_config_dir",
+        "prefect_schedule_logs_dir",
+        "prefect_schedule_state_dir",
         mode="before",
     )
     @classmethod

@@ -13,6 +13,7 @@ AgentName = Literal[
     "stacker_status",
     "new_listing",
     "setup_stackers",
+    "schedule_prefect",
 ]
 
 
@@ -35,6 +36,11 @@ COMMAND_HELP: tuple[str, ...] = (
     "/new-listing-dryrun -> create config and run dry-run preview",
     "/setup-stackers -> create and save stacker request body",
     "/setup-stackers-dryrun -> create and save dry-run stacker request body",
+    "/schedule-volume -> create one Prefect run for volume-start-strategy",
+    "/schedule-mirror -> create one Prefect run for mirror-control",
+    "/schedule-stackers -> create 4 Prefect runs for stacker levels 1 to 4 with configurable interval minutes",
+    "/schedule-new-listing -> create stackers 1-4, then volume, then mirror from one start time",
+    "/remove-schedules -> delete Prefect flow runs by flow_run_id or flow_run_ids",
 )
 
 COMMAND_ALIASES: dict[str, AgentName] = {
@@ -55,6 +61,11 @@ COMMAND_ALIASES: dict[str, AgentName] = {
     "/setup-stackers": "setup_stackers",
     "/setup-stackers-dryrun": "setup_stackers",
     "/setup-stacker-config": "setup_stackers",
+    "/schedule-volume": "schedule_prefect",
+    "/schedule-mirror": "schedule_prefect",
+    "/schedule-stacker": "schedule_prefect",
+    "/schedule-new-listing": "schedule_prefect",
+    "/remove-schedules": "schedule_prefect",
 }
 
 NEW_LISTING_DRYRUN_COMMANDS = frozenset({"/new-listing-dryrun"})
@@ -62,6 +73,15 @@ NEW_LISTING_TEMPLATE_COMMANDS = frozenset({"/new-listing", *NEW_LISTING_DRYRUN_C
 SETUP_STACKERS_DRYRUN_COMMANDS = frozenset({"/setup-stackers-dryrun"})
 SETUP_STACKERS_TEMPLATE_COMMANDS = frozenset(
     {"/setup-stackers", "/setup-stacker-config", *SETUP_STACKERS_DRYRUN_COMMANDS}
+)
+PREFECT_SCHEDULE_TEMPLATE_COMMANDS = frozenset(
+    {
+        "/schedule-volume",
+        "/schedule-mirror",
+        "/schedule-stacker",
+        "/schedule-new-listing",
+        "/remove-schedules",
+    }
 )
 
 
