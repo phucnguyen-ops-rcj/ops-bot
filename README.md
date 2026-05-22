@@ -16,13 +16,13 @@ Prefer slash commands because routing is deterministic:
 /transfer sub to main 10 USDT from kc sub account ktfsmc15
 /monitor every 10 seconds
 /volume-fills KAIO
-/stacker-status KAIO-USDT
+/stackers-status KAIO-USDT
 /help
 /new-listing
 /new-listing-dryrun
 /schedule-volume
 /schedule-mirror
-/schedule-stacker
+/schedule-stackers
 /schedule-new-listing
 /remove-schedules
 symbol: ATWO
@@ -36,10 +36,10 @@ gateway port: 45704
 ```
 
 Keyword routing also exists for health, balance, transfer, monitor,
-`volume-fills`, and `stacker-status` messages.
+`volume-fills`, and `stackers-status` messages.
 
 `/volume-fills` posts to `/get_volume_strategy_fills` using
-`base_currency`/`quote_currency` derived from the symbol. `/stacker-status`
+`base_currency`/`quote_currency` derived from the symbol. `/stackers-status`
 posts to `/get_stacker_accepted_orders` using the normalized symbol. Both
 accept an optional `date` in `YYYYMMDD` format.
 
@@ -58,14 +58,14 @@ uv run new_listing ATWO --execution-mode ssh
 uv run new_listing ATWO --execution-mode local
 ```
 
-`/schedule-volume`, `/schedule-mirror`, `/schedule-stacker`, and
+`/schedule-volume`, `/schedule-mirror`, `/schedule-stackers`, and
 `/schedule-new-listing` do not use BAML extraction. They expect a JSON payload
 and send the Prefect scheduling result back through Signal. Use
 `scheduled_time` in a simple local format like `"05:00"` or
 `"2026-05-22 09:30"`, or full ISO 8601 if needed.
 
 `/schedule-volume` and `/schedule-mirror` create one Prefect deployment run.
-`/schedule-stacker` creates four one-time runs for levels 1, 2, 3, and 4 using
+`/schedule-stackers` creates four one-time runs for levels 1, 2, 3, and 4 using
 `stacker_interval_minutes`, which defaults to `10`. `/schedule-new-listing`
 creates stackers 1 to 4 from the requested start time, volume at `+65`
 minutes, and mirror at `+120` minutes by default.

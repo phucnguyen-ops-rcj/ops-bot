@@ -31,7 +31,7 @@ COMMAND_HELP: tuple[str, ...] = (
     "/transfer, /move, /withdraw -> run transfer",
     "/monitor, /watch -> run monitor",
     "/volume-fills -> get volume strategy fills",
-    "/stacker-status -> check stacker accepted orders",
+    "/stackers-status -> check stacker accepted orders",
     "/new-listing -> create config and run new-listing workflow",
     "/new-listing-dryrun -> create config and run dry-run preview",
     "/setup-stackers -> create and save stacker request body",
@@ -63,7 +63,7 @@ COMMAND_ALIASES: dict[str, AgentName] = {
     "/setup-stacker-config": "setup_stackers",
     "/schedule-volume": "schedule_prefect",
     "/schedule-mirror": "schedule_prefect",
-    "/schedule-stacker": "schedule_prefect",
+    "/schedule-stackers": "schedule_prefect",
     "/schedule-new-listing": "schedule_prefect",
     "/remove-schedules": "schedule_prefect",
 }
@@ -78,7 +78,7 @@ PREFECT_SCHEDULE_TEMPLATE_COMMANDS = frozenset(
     {
         "/schedule-volume",
         "/schedule-mirror",
-        "/schedule-stacker",
+        "/schedule-stackers",
         "/schedule-new-listing",
         "/remove-schedules",
     }
@@ -138,6 +138,8 @@ def route_message(text: str) -> RoutedMessage | None:
         for phrase in (
             "stacker status",
             "stacker-status",
+            "stackers status",
+            "stackers-status",
             "accepted orders",
             "check status",
         )

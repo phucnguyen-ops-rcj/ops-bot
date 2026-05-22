@@ -30,6 +30,14 @@ def test_route_volume_fills_slash_command() -> None:
     assert routed.question == "KAIO"
 
 
+def test_route_stackers_status_slash_command() -> None:
+    routed = route_message("/stackers-status KAIO-USDT")
+
+    assert routed is not None
+    assert routed.agent == "stacker_status"
+    assert routed.question == "KAIO-USDT"
+
+
 def test_route_stacker_status_keyword() -> None:
     routed = route_message("check status for KAIO-USDT")
 
@@ -59,7 +67,7 @@ def test_route_setup_stackers_slash_command() -> None:
 
 
 def test_route_schedule_stacker_slash_command() -> None:
-    routed = route_message('/schedule-stacker {"symbol":"BILL"}')
+    routed = route_message('/schedule-stackers {"symbol":"BILL"}')
 
     assert routed is not None
     assert routed.agent == "schedule_prefect"

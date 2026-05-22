@@ -25,7 +25,7 @@ SCHEDULE_VOLUME_TEMPLATE = """{
   "scheduled_time": "2026-05-22 09:30"
 }"""
 
-SCHEDULE_STACKER_TEMPLATE = """{
+SCHEDULE_STACKERS_TEMPLATE = """{
   "symbol": "BILL",
   "quote_ccy": "USDT",
   "scheduled_time": "2026-05-22 09:30",
@@ -378,8 +378,8 @@ def schedule_template_for_command(command: str | None) -> str:
         return REMOVE_SCHEDULES_TEMPLATE
     if command == "/schedule-new-listing":
         return SCHEDULE_NEW_LISTING_TEMPLATE
-    if command == "/schedule-stacker":
-        return SCHEDULE_STACKER_TEMPLATE
+    if command == "/schedule-stackers":
+        return SCHEDULE_STACKERS_TEMPLATE
     return DEFAULT_PREFECT_SCHEDULE_TEMPLATE
 
 
