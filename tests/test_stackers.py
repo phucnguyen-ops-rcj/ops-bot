@@ -7,11 +7,18 @@ from pathlib import Path
 from ops_bot.clients.ops_api import OpsApiResponse
 from ops_bot.responses import BotResponse
 from ops_bot.service import handle_user_message
-from ops_bot.stackers.bot_service import SETUP_STACKERS_INPUT_TEMPLATE
+from ops_bot.stackers.bot_service import (
+    SETUP_STACKERS_INPUT_TEMPLATE,
+    UPDATE_STACKERS_INPUT_TEMPLATE,
+)
 
 
 def test_setup_stackers_template_response() -> None:
     assert asyncio.run(handle_user_message("/setup-stackers")) == SETUP_STACKERS_INPUT_TEMPLATE
+
+
+def test_update_stackers_template_response() -> None:
+    assert asyncio.run(handle_user_message("/update-stackers")) == UPDATE_STACKERS_INPUT_TEMPLATE
 
 
 def test_setup_stackers_builds_and_saves_request_body(
@@ -313,3 +320,135 @@ def test_setup_stackers_fails_when_unique_count_is_impossible(
         == "Could not generate enough unique stackers for the requested count. "
         "Widen the price/quantity ranges or reduce count."
     )
+
+
+def test_update_stackers_builds_dry_run_body(
+    monkeypatch,
+    tmp_path,
+) -> None:
+    config_dir = tmp_path / "stackers" / "config"
+    logs_dir = tmp_path / "stackers" / "logs"
+    monkeypatch.setattr(
+        "ops_bot.stackers.bot_service.app_settings.stacker_config_dir",
+        config_dir,
+    )
+    monkeypatch.setattr(
+        "ops_bot.stackers.bot_service.app_settings.stacker_logs_dir",
+        logs_dir,
+    )
+
+    values = iter([0.10, 0.20, 0.50, 0.30])
+    monkeypatch.setattr(
+        "ops_bot.stackers.bot_service.random.random",
+        lambda: next(values),
+    )
+
+    message = """/update-stackers-dryrun
+{
+  "exchanges": "kucoin",
+  "base_ccy": "RAVE",
+  "quote_ccy": "USDT",
+  "max_price": 10.0,
+  "tick_size": 0.00001,
+  "buy": {
+    "min_price": 0.00001,
+    "max_price": 0.01,
+    "min_quantity": 1000,
+    "max_quantity": 10000,
+    "count": 1
+  },
+  "sell": {
+    "min_price": 0.5,
+    "max_price": 1.0,
+    "min_quantity": 100,
+    "max_quantity": 1000,
+    "count": 1
+  }
+}"""
+
+    response = asyncio.run(handle_user_message(message))
+
+    assert isinstance(response, BotResponse)
+    body = json.loads(response.message)
+    assert body["exchanges"] == "kucoin"
+    assert body["base_ccy"] == "RAVE"
+    assert body["quote_ccy"] == "USDT"
+    assert body["max_price"] == 10.0
+    assert body["tick_size"] == 0.00001
+    assert body["buy_stackers"] == "[{price: 0.00101 original_quantity: 2800.0000}]"
+    assert body["sell_stackers"] == "[{price: 0.75000 original_quantity: 370.0000}]"
+
+    request_path = config_dir / "RAVE.update.request.json"
+    assert response.attachments == (request_path,)
+    assert request_path.exists()
+    assert '"tick_size": 0.00001' in request_path.read_text(encoding="utf-8")
+    log_files = list(logs_dir.glob("RAVE_*.log"))
+    assert len(log_files) == 1
+    assert "dry_run: True" in log_files[0].read_text(encoding="utf-8")
+
+
+def test_update_stackers_executes_api_in_real_mode(
+    monkeypatch,
+    tmp_path,
+) -> None:
+    config_dir = tmp_path / "stackers" / "config"
+    logs_dir = tmp_path / "stackers" / "logs"
+    monkeypatch.setattr(
+        "ops_bot.stackers.bot_service.app_settings.stacker_config_dir",
+        config_dir,
+    )
+    monkeypatch.setattr(
+        "ops_bot.stackers.bot_service.app_settings.stacker_logs_dir",
+        logs_dir,
+    )
+
+    captured: dict[str, object] = {}
+
+    def fake_post(self, endpoint: str, payload: dict[str, object]) -> OpsApiResponse:
+        captured["endpoint"] = endpoint
+        captured["payload"] = payload
+        return OpsApiResponse(
+            endpoint=endpoint,
+            status=200,
+            body='{"status":"updated"}',
+            payload=payload,
+        )
+
+    monkeypatch.setattr("ops_bot.stackers.bot_service.OpsApiClient.post", fake_post)
+
+    message = """/update-stackers
+{
+  "exchanges": "kucoin",
+  "base_ccy": "RAVE",
+  "quote_ccy": "USDT",
+  "feed_host": "0.0.0.0:41740",
+  "gateway_host": "0.0.0.0:41799"
+}"""
+
+    response = asyncio.run(handle_user_message(message))
+
+    assert isinstance(response, BotResponse)
+    assert response.message == '{"status":"updated"}'
+    assert captured["endpoint"] == "/update_stacker_config"
+    assert captured["payload"] == {
+        "exchanges": "kucoin",
+        "base_ccy": "RAVE",
+        "quote_ccy": "USDT",
+        "feed_host": "0.0.0.0:41740",
+        "gateway_host": "0.0.0.0:41799",
+    }
+    assert response.attachments == (config_dir / "RAVE.update.request.json",)
+
+
+def test_update_stackers_requires_an_update_field() -> None:
+    message = """/update-stackers-dryrun
+{
+  "exchanges": "kucoin",
+  "base_ccy": "RAVE",
+  "quote_ccy": "USDT"
+}"""
+
+    response = asyncio.run(handle_user_message(message))
+
+    assert isinstance(response, str)
+    assert response.startswith("Provide at least one update field:")

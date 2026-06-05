@@ -13,6 +13,7 @@ AgentName = Literal[
     "stacker_status",
     "new_listing",
     "setup_stackers",
+    "update_stackers",
     "schedule_prefect",
 ]
 
@@ -36,6 +37,8 @@ COMMAND_HELP: tuple[str, ...] = (
     "/new-listing-dryrun -> create config and run dry-run preview",
     "/setup-stackers -> create and save stacker request body",
     "/setup-stackers-dryrun -> create and save dry-run stacker request body",
+    "/update-stackers -> update existing stacker config fields",
+    "/update-stackers-dryrun -> create and save dry-run stacker update request body",
     "/schedule-volume -> create one Prefect run for volume-start-strategy",
     "/schedule-mirror -> create one Prefect run for mirror-control",
     "/schedule-stackers -> create 4 Prefect runs for stacker levels 1 to 4 with configurable interval minutes",
@@ -61,6 +64,8 @@ COMMAND_ALIASES: dict[str, AgentName] = {
     "/setup-stackers": "setup_stackers",
     "/setup-stackers-dryrun": "setup_stackers",
     "/setup-stacker-config": "setup_stackers",
+    "/update-stackers": "update_stackers",
+    "/update-stackers-dryrun": "update_stackers",
     "/schedule-volume": "schedule_prefect",
     "/schedule-mirror": "schedule_prefect",
     "/schedule-stackers": "schedule_prefect",
@@ -73,6 +78,10 @@ NEW_LISTING_TEMPLATE_COMMANDS = frozenset({"/new-listing", *NEW_LISTING_DRYRUN_C
 SETUP_STACKERS_DRYRUN_COMMANDS = frozenset({"/setup-stackers-dryrun"})
 SETUP_STACKERS_TEMPLATE_COMMANDS = frozenset(
     {"/setup-stackers", "/setup-stacker-config", *SETUP_STACKERS_DRYRUN_COMMANDS}
+)
+UPDATE_STACKERS_DRYRUN_COMMANDS = frozenset({"/update-stackers-dryrun"})
+UPDATE_STACKERS_TEMPLATE_COMMANDS = frozenset(
+    {"/update-stackers", *UPDATE_STACKERS_DRYRUN_COMMANDS}
 )
 PREFECT_SCHEDULE_TEMPLATE_COMMANDS = frozenset(
     {
@@ -150,6 +159,12 @@ def route_message(text: str) -> RoutedMessage | None:
         phrase in lower for phrase in ("new listing", "new-listing", "newlisting")
     ):
         return RoutedMessage(agent="new_listing", question=stripped)
+
+    if any(
+        phrase in lower
+        for phrase in ("update stackers", "update stacker config")
+    ):
+        return RoutedMessage(agent="update_stackers", question=stripped)
 
     if any(
         phrase in lower

@@ -15,7 +15,9 @@ from ops_bot.response_format import format_ops_response_body
 from ops_bot.responses import BotResponse
 from ops_bot.stackers import (
     SETUP_STACKERS_INPUT_TEMPLATE,
+    UPDATE_STACKERS_INPUT_TEMPLATE,
     handle_setup_stackers_command,
+    handle_update_stackers_command,
 )
 from ops_bot.routing import (
     COMMAND_HELP,
@@ -24,6 +26,8 @@ from ops_bot.routing import (
     PREFECT_SCHEDULE_TEMPLATE_COMMANDS,
     SETUP_STACKERS_DRYRUN_COMMANDS,
     SETUP_STACKERS_TEMPLATE_COMMANDS,
+    UPDATE_STACKERS_DRYRUN_COMMANDS,
+    UPDATE_STACKERS_TEMPLATE_COMMANDS,
     route_message,
 )
 
@@ -43,13 +47,32 @@ async def handle_user_message(
     if routed.agent == "help":
         return HELP_TEXT
 
-    if routed.agent == "new_listing" and routed.command in NEW_LISTING_TEMPLATE_COMMANDS and routed.question.strip() in {"", routed.command}:
+    if (
+        routed.agent == "new_listing"
+        and routed.command in NEW_LISTING_TEMPLATE_COMMANDS
+        and routed.question.strip() in {"", routed.command}
+    ):
         return NEW_LISTING_INPUT_TEMPLATE
 
-    if routed.agent == "setup_stackers" and routed.command in SETUP_STACKERS_TEMPLATE_COMMANDS and routed.question.strip() in {"", routed.command}:
+    if (
+        routed.agent == "setup_stackers"
+        and routed.command in SETUP_STACKERS_TEMPLATE_COMMANDS
+        and routed.question.strip() in {"", routed.command}
+    ):
         return SETUP_STACKERS_INPUT_TEMPLATE
 
-    if routed.agent == "schedule_prefect" and routed.command in PREFECT_SCHEDULE_TEMPLATE_COMMANDS and routed.question.strip() in {"", routed.command}:
+    if (
+        routed.agent == "update_stackers"
+        and routed.command in UPDATE_STACKERS_TEMPLATE_COMMANDS
+        and routed.question.strip() in {"", routed.command}
+    ):
+        return UPDATE_STACKERS_INPUT_TEMPLATE
+
+    if (
+        routed.agent == "schedule_prefect"
+        and routed.command in PREFECT_SCHEDULE_TEMPLATE_COMMANDS
+        and routed.question.strip() in {"", routed.command}
+    ):
         return schedule_template_for_command(routed.command)
 
     if routed.agent == "setup_stackers":
@@ -57,6 +80,15 @@ async def handle_user_message(
             return handle_setup_stackers_command(
                 routed.question,
                 dry_run=routed.command in SETUP_STACKERS_DRYRUN_COMMANDS,
+            )
+        except ValueError as exc:
+            return str(exc)
+
+    if routed.agent == "update_stackers":
+        try:
+            return handle_update_stackers_command(
+                routed.question,
+                dry_run=routed.command in UPDATE_STACKERS_DRYRUN_COMMANDS,
             )
         except ValueError as exc:
             return str(exc)

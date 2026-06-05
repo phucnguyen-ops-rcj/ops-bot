@@ -45,6 +45,49 @@ SETUP_STACKERS_INPUT_TEMPLATE = """{
   }
 }"""
 
+UPDATE_STACKERS_INPUT_TEMPLATE = """{
+  "exchanges": "kucoin",
+  "base_ccy": "RAVE",
+  "quote_ccy": "USDT",
+  "feed_host": "0.0.0.0:41740",
+  "gateway_host": "0.0.0.0:41799",
+  "tick_size": 0.00001,
+  "quantity_step_size": 0.1,
+  "min_price": 0.00001,
+  "max_price": 10.0,
+  "min_quantity": 10,
+  "max_quantity": 1000000,
+  "buy": {
+    "min_price": 0.00001,
+    "max_price": 0.01,
+    "min_quantity": 1000,
+    "max_quantity": 10000,
+    "count": 50
+  },
+  "sell": {
+    "min_price": 0.5,
+    "max_price": 1.0,
+    "min_quantity": 100,
+    "max_quantity": 1000,
+    "count": 50
+  }
+}"""
+
+UPDATE_STACKER_OPTIONAL_FIELDS = frozenset(
+    {
+        "feed_host",
+        "gateway_host",
+        "tick_size",
+        "quantity_step_size",
+        "min_price",
+        "max_price",
+        "min_quantity",
+        "max_quantity",
+        "buy_stackers",
+        "sell_stackers",
+    }
+)
+
 
 @dataclass(frozen=True)
 class SideRange:
@@ -73,6 +116,20 @@ class SideRange:
         if min_quantity > max_quantity:
             raise ValueError(f"{key}.min_quantity cannot exceed {key}.max_quantity.")
         return cls(min_price, max_price, min_quantity, max_quantity, count)
+
+    @classmethod
+    def from_optional_dict(
+        cls,
+        payload: dict[str, Any],
+        *keys: str,
+    ) -> "SideRange | None":
+        for key in keys:
+            if key in payload:
+                value = payload[key]
+                if not isinstance(value, dict):
+                    raise ValueError(f"{key} must be a JSON object.")
+                return cls.from_dict(payload, key)
+        return None
 
 
 @dataclass(frozen=True)
@@ -148,6 +205,43 @@ class StackerSetupRequest:
         )
 
 
+@dataclass(frozen=True)
+class StackerUpdateRequest:
+    exchanges: str
+    base_ccy: str
+    quote_ccy: str
+    updates: dict[str, Any]
+    buy: SideRange | None
+    sell: SideRange | None
+
+    @classmethod
+    def from_payload(cls, payload: dict[str, Any]) -> "StackerUpdateRequest":
+        exchanges = _require_text(payload, "exchanges").lower()
+        base_ccy = _require_text(payload, "base_ccy").upper()
+        quote_ccy = _require_text(payload, "quote_ccy").upper()
+        updates = _extract_stacker_update_fields(payload)
+        buy = SideRange.from_optional_dict(payload, "buy", "bid")
+        sell = SideRange.from_optional_dict(payload, "sell", "ask")
+        if buy is not None:
+            updates["buy_stackers"] = None
+        if sell is not None:
+            updates["sell_stackers"] = None
+        if not updates:
+            raise ValueError(
+                "Provide at least one update field: "
+                + ", ".join(sorted(UPDATE_STACKER_OPTIONAL_FIELDS))
+                + "."
+            )
+        return cls(
+            exchanges=exchanges,
+            base_ccy=base_ccy,
+            quote_ccy=quote_ccy,
+            updates=updates,
+            buy=buy,
+            sell=sell,
+        )
+
+
 def handle_setup_stackers_command(question: str, *, dry_run: bool) -> BotResponse:
     payload = _extract_json_payload(question)
     request = StackerSetupRequest.from_payload(payload)
@@ -177,6 +271,39 @@ def handle_setup_stackers_command(question: str, *, dry_run: bool) -> BotRespons
     )
     return BotResponse(
         message=format_ops_response_body("/setup_stacker_config", response.body),
+        attachments=(body_path,),
+    )
+
+
+def handle_update_stackers_command(question: str, *, dry_run: bool) -> BotResponse:
+    payload = _extract_json_payload(question)
+    request = StackerUpdateRequest.from_payload(payload)
+    body = build_stacker_update_request_body(request)
+    body_path = save_stacker_update_body(body, request.base_ccy)
+    if dry_run:
+        save_stacker_log(request.base_ccy, payload, body, dry_run=True)
+        return BotResponse(
+            message=_format_json_body(body),
+            attachments=(body_path,),
+        )
+
+    client = OpsApiClient(
+        base_endpoint=app_settings.rcj_ops_base_endpoint,
+        timeout_seconds=app_settings.rcj_ops_timeout_seconds,
+        execution_mode=app_settings.rcj_ops_execution_mode,
+        ssh_host=app_settings.rcj_ops_ssh_host,
+    )
+    response = client.post("/update_stacker_config", body)
+    save_stacker_log(
+        request.base_ccy,
+        payload,
+        body,
+        dry_run=False,
+        response_status=response.status,
+        response_body=response.body,
+    )
+    return BotResponse(
+        message=format_ops_response_body("/update_stacker_config", response.body),
         attachments=(body_path,),
     )
 
@@ -212,6 +339,34 @@ def build_stacker_request_body(request: StackerSetupRequest) -> dict[str, Any]:
     }
 
 
+def build_stacker_update_request_body(request: StackerUpdateRequest) -> dict[str, Any]:
+    body: dict[str, Any] = {
+        "exchanges": request.exchanges,
+        "base_ccy": request.base_ccy,
+        "quote_ccy": request.quote_ccy,
+    }
+    for key, value in request.updates.items():
+        if value is not None:
+            body[key] = value
+
+    price_decimals = _update_price_decimals(request)
+    if request.buy is not None:
+        buy_stackers = _generate_stackers(
+            request.buy,
+            price_decimals=price_decimals,
+            quantity_decimals=4,
+        )
+        body["buy_stackers"] = _stackers_proto_string(buy_stackers, price_decimals)
+    if request.sell is not None:
+        sell_stackers = _generate_stackers(
+            request.sell,
+            price_decimals=price_decimals,
+            quantity_decimals=4,
+        )
+        body["sell_stackers"] = _stackers_proto_string(sell_stackers, price_decimals)
+    return body
+
+
 def save_stacker_config(payload: dict[str, Any], symbol: str) -> Path:
     path = app_settings.stacker_config_dir
     path.mkdir(parents=True, exist_ok=True)
@@ -224,6 +379,14 @@ def save_stacker_body(body: dict[str, Any], symbol: str) -> Path:
     path = app_settings.stacker_config_dir
     path.mkdir(parents=True, exist_ok=True)
     body_path = path / f"{symbol}.request.json"
+    body_path.write_text(_format_json_body(body), encoding="utf-8")
+    return body_path
+
+
+def save_stacker_update_body(body: dict[str, Any], symbol: str) -> Path:
+    path = app_settings.stacker_config_dir
+    path.mkdir(parents=True, exist_ok=True)
+    body_path = path / f"{symbol}.update.request.json"
     body_path.write_text(_format_json_body(body), encoding="utf-8")
     return body_path
 
@@ -275,8 +438,47 @@ def _extract_json_payload(question: str) -> dict[str, Any]:
     except json.JSONDecodeError as exc:
         raise ValueError(f"Invalid JSON payload: {exc.msg}") from exc
     if not isinstance(payload, dict):
-        raise ValueError("Stacker setup payload must be a JSON object.")
+        raise ValueError("Stacker payload must be a JSON object.")
     return payload
+
+
+def _extract_stacker_update_fields(payload: dict[str, Any]) -> dict[str, Any]:
+    updates: dict[str, Any] = {}
+    for key in ("feed_host", "gateway_host", "buy_stackers", "sell_stackers"):
+        if key in payload:
+            updates[key] = _require_text(payload, key)
+    for key in (
+        "tick_size",
+        "quantity_step_size",
+        "min_price",
+        "max_price",
+        "min_quantity",
+        "max_quantity",
+    ):
+        if key in payload:
+            updates[key] = float(_require_decimal(payload, key, label=key))
+    return updates
+
+
+def _update_price_decimals(request: StackerUpdateRequest) -> int:
+    if "tick_size" in request.updates:
+        return _decimal_places(Decimal(str(request.updates["tick_size"])))
+    values: list[Decimal] = []
+    for side in (request.buy, request.sell):
+        if side is None:
+            continue
+        values.extend([side.min_price, side.max_price])
+    if not values:
+        return 4
+    return max(_decimal_places(value) for value in values)
+
+
+def _decimal_places(value: Decimal) -> int:
+    normalized = value.normalize()
+    exponent = normalized.as_tuple().exponent
+    if not isinstance(exponent, int):
+        return 0
+    return max(0, -exponent)
 
 
 def _generate_stackers(

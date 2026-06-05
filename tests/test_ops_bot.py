@@ -66,6 +66,13 @@ def test_route_setup_stackers_slash_command() -> None:
     assert routed.agent == "setup_stackers"
 
 
+def test_route_update_stackers_slash_command() -> None:
+    routed = route_message('/update-stackers {"base_ccy":"RAVE"}')
+
+    assert routed is not None
+    assert routed.agent == "update_stackers"
+
+
 def test_route_schedule_stacker_slash_command() -> None:
     routed = route_message('/schedule-stackers {"symbol":"BILL"}')
 
