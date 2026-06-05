@@ -3,39 +3,13 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any, Literal
 
+from ops_bot.account_aliases import (
+    FUTURES_EXCHANGES,
+    SUPPORTED_EXCHANGES,
+    TRANSFER_MODES,
+)
 from ops_bot.clients.ops_api import normalize_symbol
 from ops_bot.routing import AgentName
-
-SUPPORTED_EXCHANGES = {
-    "kc",
-    "kcf",
-    "kucoin",
-    "kucoinf",
-    "bybit",
-    "byb",
-    "okx",
-    "gate",
-    "gateio",
-    "binance",
-    "bin",
-    "binf",
-    "binancef",
-    "bitget",
-    "mexc",
-    "fintrade",
-    "fintradef",
-}
-FUTURES_EXCHANGES = {"kcf", "binf", "fintradef"}
-TRANSFER_MODES = {
-    "sub_to_main",
-    "main_to_sub",
-    "withdraw",
-    "future_to_spot",
-    "spot_to_future",
-    "future_to_main",
-    "main_to_future",
-    "trading_to_funding",
-}
 
 
 @dataclass(frozen=True)

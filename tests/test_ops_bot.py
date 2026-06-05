@@ -211,6 +211,72 @@ Welcome to Ubuntu 22.04.3 LTS
     )
 
 
+def test_format_failed_balance_response_includes_exchange_accounts() -> None:
+    call = build_ops_call(
+        "balance",
+        {"exchange": "bin", "account": "volume2", "missing_fields": []},
+    )
+    body = (
+        '{"code":404,"message":"Sub-account \'volume2\' not found under exchange '
+        '\'bin\'","request_id":"939f95926043484a892e8518556ccff6"}'
+    )
+
+    assert _format_response(call, 200, body) == (
+        body + '\nbinance account: ["fr"]'
+    )
+
+
+def test_format_failed_transfer_response_includes_source_exchange_accounts() -> None:
+    call = build_ops_call(
+        "transfer",
+        {
+            "mode": "sub_to_main",
+            "token": "usdt",
+            "from_exchange": "kc",
+            "amount": 10,
+            "sub_account_name": "volume2",
+            "missing_fields": [],
+        },
+    )
+    body = (
+        '{"code":404,"message":"Sub-account \'volume2\' not found under exchange '
+        '\'kc\'","request_id":"939f95926043484a892e8518556ccff6"}'
+    )
+
+    assert _format_response(call, 200, body) == (
+        body
+        + '\nkucoin account: ["spotarb", "fdvstrat", "-vefrspot", '
+        '"volumenewlisting", "liquidity", "spotinv", "mirroracc2", '
+        '"colostrat1", "rfqhedge", "FR2"]'
+    )
+
+
+def test_format_failed_transfer_response_includes_both_exchange_accounts() -> None:
+    call = build_ops_call(
+        "transfer",
+        {
+            "mode": "withdraw",
+            "token": "usdt",
+            "from_exchange": "kc",
+            "to_exchange": "bin",
+            "amount": 10,
+            "missing_fields": [],
+        },
+    )
+    body = (
+        '{"code":404,"message":"Transfer account not found",'
+        '"request_id":"939f95926043484a892e8518556ccff6"}'
+    )
+
+    assert _format_response(call, 200, body) == (
+        body
+        + '\nkucoin account: ["spotarb", "fdvstrat", "-vefrspot", '
+        '"volumenewlisting", "liquidity", "spotinv", "mirroracc2", '
+        '"colostrat1", "rfqhedge", "FR2"]'
+        + '\nbinance account: ["fr"]'
+    )
+
+
 def test_format_non_json_response_omits_method_and_status() -> None:
     call = build_ops_call("health", {})
 

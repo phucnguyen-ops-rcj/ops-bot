@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from ops_bot.account_aliases import format_account_aliases_for_exchange
 from ops_bot.clients.ops_api import OpsApiClient
 from ops_bot.extractor import extract_params
 from ops_bot.new_listing import (
@@ -11,7 +12,7 @@ from ops_bot.prefect_schedules import (
     handle_schedule_prefect_command,
     schedule_template_for_command,
 )
-from ops_bot.response_format import format_ops_response_body
+from ops_bot.response_format import extract_json_payload, format_ops_response_body
 from ops_bot.responses import BotResponse
 from ops_bot.stackers import (
     SETUP_STACKERS_INPUT_TEMPLATE,
@@ -145,4 +146,57 @@ def _format_dry_run(call: OpsCall) -> str:
 
 
 def _format_response(call: OpsCall, status: int, body: str) -> str:
-    return format_ops_response_body(call.endpoint, body)
+    formatted = format_ops_response_body(call.endpoint, body)
+    account_aliases = _account_aliases_for_failed_account_call(call, status, body)
+    if account_aliases is None:
+        return formatted
+    return "\n".join([formatted, account_aliases])
+
+
+def _account_aliases_for_failed_account_call(
+    call: OpsCall,
+    status: int,
+    body: str,
+) -> str | None:
+    if call.endpoint == "/get-balance":
+        exchanges = [call.payload.get("exchange")]
+    elif call.endpoint == "/run-transfer":
+        exchanges = [
+            call.payload.get("from_exchange"),
+            call.payload.get("to_exchange"),
+        ]
+    else:
+        return None
+
+    if not _is_failed_ops_response(status, body):
+        return None
+    aliases = []
+    seen: set[str] = set()
+    for exchange in exchanges:
+        if not exchange:
+            continue
+        normalized_exchange = str(exchange).lower()
+        if normalized_exchange in seen:
+            continue
+        seen.add(normalized_exchange)
+        formatted = format_account_aliases_for_exchange(str(exchange))
+        if formatted is not None:
+            aliases.append(formatted)
+    if not aliases:
+        return None
+    return "\n".join(aliases)
+
+
+def _is_failed_ops_response(status: int, body: str) -> bool:
+    if status >= 400:
+        return True
+    payload = extract_json_payload(body)
+    if not isinstance(payload, dict):
+        return False
+    code = payload.get("code")
+    if code is None:
+        return False
+    try:
+        return int(code) >= 400
+    except (TypeError, ValueError):
+        return False
