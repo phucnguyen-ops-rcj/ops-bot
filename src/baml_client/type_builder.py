@@ -214,7 +214,7 @@ class NewListingExtractionAst:
     def __init__(self, tb: type_builder.TypeBuilder):
         _tb = tb._tb # type: ignore (we know how to use this private attribute)
         self._bldr = _tb.class_("NewListingExtraction")
-        self._properties: typing.Set[str] = set([  "symbol",  "market",  "tier",  "price_decimals",  "quantity_decimals",  "feed_port",  "gateway_port",  "create_new_gate_way",  "missing_fields",  ])
+        self._properties: typing.Set[str] = set([  "symbol",  "market",  "exchanges",  "tier",  "price_decimals",  "quantity_decimals",  "feed_port",  "gateway_port",  "create_new_gate_way",  "missing_fields",  ])
         self._props = NewListingExtractionProperties(self._bldr, self._properties)
 
     def type(self) -> baml_py.FieldType:
@@ -249,6 +249,10 @@ class NewListingExtractionProperties:
     @property
     def market(self) -> type_builder.ClassPropertyViewer:
         return type_builder.ClassPropertyViewer(self.__bldr.property("market"))
+    
+    @property
+    def exchanges(self) -> type_builder.ClassPropertyViewer:
+        return type_builder.ClassPropertyViewer(self.__bldr.property("exchanges"))
     
     @property
     def tier(self) -> type_builder.ClassPropertyViewer:

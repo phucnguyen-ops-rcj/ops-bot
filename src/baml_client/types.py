@@ -61,6 +61,7 @@ class MonitorExtraction(BaseModel):
 class NewListingExtraction(BaseModel):
     symbol: typing.Optional[str] = None
     market: typing.Optional[str] = None
+    exchanges: typing.Optional[str] = None
     tier: typing.Optional[str] = None
     price_decimals: typing.Optional[int] = None
     quantity_decimals: typing.Optional[int] = None

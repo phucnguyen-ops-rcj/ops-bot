@@ -40,6 +40,7 @@ class StackerStatusExtraction {
 class NewListingExtraction {
   symbol string?
   market string?
+  exchanges string?
   tier string?
   price_decimals int?
   quantity_decimals int?
@@ -197,6 +198,8 @@ function ExtractNewListingRequest(user_question: string) -> NewListingExtraction
     Rules:
     - symbol is required.
     - market is optional and defaults to spot.
+    - exchanges is optional and defaults to kucoin,gate. Extract explicit
+      input like `exchanges: "binance,kucoin"` as `binance,kucoin`.
     - tier is required. Keep the user tier value, usually S, A, B, or C.
     - price_decimals is required. Convert phrases like "1 * 5 decimal places"
       to 5.

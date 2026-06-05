@@ -23,6 +23,7 @@ TIER_VOLUME_REQUIREMENTS = {
 NEW_LISTING_INPUT_TEMPLATE = """/new-listing
 symbol: ATWO
 market: spot
+exchanges: kucoin,gate
 tier: C
 create_new_gate_way: false
 price decimals: 5
@@ -35,6 +36,7 @@ gateway port: 45704"""
 class NewListingRequest:
     symbol: str
     market: str
+    exchanges: str
     tier: str
     create_new_gate_way: bool
     price_decimals: int
@@ -46,6 +48,7 @@ class NewListingRequest:
     def from_extracted(cls, extracted: dict[str, Any]) -> "NewListingRequest":
         symbol = _require_text(extracted, "symbol").upper()
         market = _optional_text(extracted.get("market")) or "spot"
+        exchanges = _optional_exchanges(extracted.get("exchanges"))
         tier = _require_text(extracted, "tier").upper()
         create_new_gate_way = _optional_bool(
             extracted.get("create_new_gate_way"),
@@ -64,6 +67,7 @@ class NewListingRequest:
         return cls(
             symbol=symbol,
             market=market,
+            exchanges=exchanges,
             tier=tier,
             create_new_gate_way=create_new_gate_way,
             price_decimals=price_decimals,
@@ -83,6 +87,7 @@ def handle_new_listing_command(extracted: dict[str, Any], *, dry_run: bool) -> B
         "symbol": request.symbol,
         "market": request.market,
         "tier": request.tier,
+        "exchanges": request.exchanges,
         "create_new_gate_way": request.create_new_gate_way,
         "price_tick": config["steps"]["2"]["body"]["price_tick"],
         "qty_unit": config["steps"]["2"]["body"]["qty_unit"],
@@ -116,6 +121,9 @@ def build_new_listing_config(request: NewListingRequest) -> dict[str, Any]:
     qty_unit = _decimal_tick(request.quantity_decimals)
     compact_symbol = f"{request.symbol}USDT"
     step6_feed_port = request.feed_port + 1
+    exchange_count = len(request.exchanges.split(","))
+    base_ccy = ",".join([request.symbol] * exchange_count)
+    quote = ",".join(["USDT"] * exchange_count)
 
     return {
         "base_endpoint": "http://18.176.93.228",
@@ -129,9 +137,9 @@ def build_new_listing_config(request: NewListingRequest) -> dict[str, Any]:
                 "label": "Arbitrage Strategy Config",
                 "endpoint": "/setup_arbitrage_strategy",
                 "body": {
-                    "exchanges": "kucoin,gate",
-                    "base_ccy": f"{request.symbol},{request.symbol}",
-                    "quote": "USDT,USDT",
+                    "exchanges": request.exchanges,
+                    "base_ccy": base_ccy,
+                    "quote": quote,
                     "market": request.market,
                     "taker_arb_min_bps": 20,
                     "maker_arb_min_bps": 20000,
@@ -351,6 +359,19 @@ def _optional_text(value: Any) -> str | None:
         return None
     normalized = str(value).strip()
     return normalized.lower() or None
+
+
+def _optional_exchanges(value: Any) -> str:
+    if value is None:
+        return "kucoin,gate"
+    exchanges = [
+        exchange.strip().lower()
+        for exchange in str(value).split(",")
+        if exchange.strip()
+    ]
+    if not exchanges:
+        return "kucoin,gate"
+    return ",".join(exchanges)
 
 
 def _require_positive_int(extracted: dict[str, Any], key: str) -> int:

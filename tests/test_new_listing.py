@@ -8,6 +8,8 @@ from pathlib import Path
 
 from ops_bot.new_listing.bot_service import (
     NEW_LISTING_INPUT_TEMPLATE,
+    NewListingRequest,
+    build_new_listing_config,
     handle_new_listing_command,
 )
 from ops_bot.new_listing.workflow import ApiResponse, print_response
@@ -93,6 +95,7 @@ def test_handle_new_listing_command_saves_config_and_trading_volume(
 
     config = json.loads(config_path.read_text(encoding="utf-8"))
     assert config["create_new_gate_way"] is False
+    assert config["steps"]["1"]["body"]["exchanges"] == "kucoin,gate"
     assert config["steps"]["2"]["body"]["market"] == "spot"
     assert config["steps"]["2"]["body"]["tier"] == "c"
     assert config["steps"]["2"]["body"]["price_tick"] == 0.00001
@@ -242,6 +245,29 @@ def test_handle_new_listing_command_real_mode_runs_workflow(monkeypatch) -> None
     assert payload["run_command"] == "uv run new_listing ATWO"
     assert preview.startswith("real output")
     assert "Attached: ATWO.json, ATWO_test.log" in preview
+
+
+def test_new_listing_request_uses_extracted_exchanges() -> None:
+    request = NewListingRequest.from_extracted(
+        {
+            "symbol": "ATWO",
+            "market": "spot",
+            "exchanges": "Binance, Kucoin, Gate",
+            "tier": "C",
+            "create_new_gate_way": False,
+            "price_decimals": 5,
+            "quantity_decimals": 1,
+            "feed_port": 41739,
+            "gateway_port": 45704,
+        }
+    )
+
+    config = build_new_listing_config(request)
+
+    assert request.exchanges == "binance,kucoin,gate"
+    assert config["steps"]["1"]["body"]["exchanges"] == "binance,kucoin,gate"
+    assert config["steps"]["1"]["body"]["base_ccy"] == "ATWO,ATWO,ATWO"
+    assert config["steps"]["1"]["body"]["quote"] == "USDT,USDT,USDT"
 
 
 def test_resolve_config_path_uses_settings_dir(
