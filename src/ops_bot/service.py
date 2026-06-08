@@ -1,6 +1,11 @@
 from __future__ import annotations
 
-from ops_bot.account_aliases import format_account_aliases_for_exchange
+import json
+
+from ops_bot.account_aliases import (
+    format_account_aliases_for_exchange,
+    format_all_account_aliases,
+)
 from ops_bot.clients.ops_api import OpsApiClient
 from ops_bot.extractor import extract_params
 from ops_bot.new_listing import (
@@ -47,6 +52,9 @@ async def handle_user_message(
 
     if routed.agent == "help":
         return HELP_TEXT
+
+    if routed.agent == "accounts":
+        return format_all_account_aliases()
 
     if (
         routed.agent == "new_listing"

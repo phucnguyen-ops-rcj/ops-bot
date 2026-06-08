@@ -29,6 +29,7 @@ def test_help_response() -> None:
     response = asyncio.run(handle_user_message("/help"))
 
     assert response is not None
+    assert "/accounts -> list maintained account names for all exchanges" in response
     assert "/health, /ping -> API health check" in response
     assert "/new-listing -> create config and run new-listing workflow" in response
     assert "/new-listing-dryrun -> create config and run dry-run preview" in response

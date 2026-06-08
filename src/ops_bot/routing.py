@@ -5,6 +5,7 @@ from typing import Literal
 
 AgentName = Literal[
     "help",
+    "accounts",
     "health",
     "balance",
     "transfer",
@@ -27,6 +28,7 @@ class RoutedMessage:
 
 COMMAND_HELP: tuple[str, ...] = (
     "/help -> list bot commands",
+    "/accounts -> list maintained account names for all exchanges",
     "/health, /ping -> API health check",
     "/balance, /bal -> get balance",
     "/transfer, /move, /withdraw -> run transfer",
@@ -48,6 +50,8 @@ COMMAND_HELP: tuple[str, ...] = (
 
 COMMAND_ALIASES: dict[str, AgentName] = {
     "/help": "help",
+    "/accounts": "accounts",
+    "/account-aliases": "accounts",
     "/health": "health",
     "/ping": "health",
     "/balance": "balance",

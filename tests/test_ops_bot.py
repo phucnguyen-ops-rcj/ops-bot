@@ -1,10 +1,12 @@
 from __future__ import annotations
 
+import asyncio
+
 import pytest
 
 from ops_bot.ops_requests import build_ops_call
 from ops_bot.routing import route_message
-from ops_bot.service import _format_response
+from ops_bot.service import _format_response, handle_user_message
 
 
 def test_route_transfer_slash_command() -> None:
@@ -57,6 +59,25 @@ def test_route_help_slash_command() -> None:
 
     assert routed is not None
     assert routed.agent == "help"
+
+
+def test_route_accounts_slash_command() -> None:
+    routed = route_message("/accounts")
+
+    assert routed is not None
+    assert routed.agent == "accounts"
+
+
+def test_accounts_command_lists_all_maintained_account_groups() -> None:
+    response = asyncio.run(handle_user_message("/accounts"))
+
+    assert isinstance(response, str)
+    assert response.startswith('binance account: ["fr"]')
+    assert 'fintrade account: ["fintrade1", "fintrade2"' in response
+    assert 'kucoin account: ["spotarb", "fdvstrat"' in response
+    assert 'kucoin futures account: ["colostrat1", "perp_API_1_volume"' in response
+    assert response.count("binance account:") == 1
+    assert response.count("kucoin account:") == 1
 
 
 def test_route_setup_stackers_slash_command() -> None:

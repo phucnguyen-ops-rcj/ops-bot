@@ -125,6 +125,17 @@ def format_account_aliases_for_exchange(exchange: str | None) -> str | None:
     return f"{display_exchange} account: {json.dumps(list(aliases))}"
 
 
+def format_all_account_aliases() -> str:
+    accounts_by_display_exchange: dict[str, tuple[str, ...]] = {}
+    for exchange, aliases in ACCOUNT_ALIASES_BY_EXCHANGE.items():
+        display_exchange = ACCOUNT_ALIAS_DISPLAY_EXCHANGES.get(exchange, exchange)
+        accounts_by_display_exchange[display_exchange] = aliases
+    return "\n".join(
+        f"{exchange} account: {json.dumps(list(accounts))}"
+        for exchange, accounts in sorted(accounts_by_display_exchange.items())
+    )
+
+
 def _normalize_exchange(exchange: str | None) -> str | None:
     if exchange is None:
         return None
