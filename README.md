@@ -47,6 +47,8 @@ accept an optional `date` in `YYYYMMDD` format.
 locally or `/data/new_listing/config` in Docker, updates the matching
 `gateway_symbols.yml` and `trading_volume.json` in the same shared data root,
 then runs the workflow in real mode.
+The optional `quote_currency` input defaults to `USDT` and is used consistently
+in generated symbols, API request bodies, gateway names, and config paths.
 `/new-listing-dryrun` does the same setup work but runs the workflow in dry-run
 mode for verification. After either command, the bot sends the generated config
 file and run log file back to Signal as attachments. `/help` lists all supported bot commands. Run the
@@ -62,7 +64,9 @@ uv run new_listing ATWO --execution-mode local
 `/schedule-new-listing` do not use BAML extraction. They expect a JSON payload
 and send the Prefect scheduling result back through Signal. Use
 `scheduled_time` in a simple local format like `"05:00"` or
-`"2026-05-22 09:30"`, or full ISO 8601 if needed.
+`"2026-05-22 09:30"`, or full ISO 8601 if needed. An optional `box` value such
+as `"T11"` is forwarded to the stacker, volume, and mirror deployment. When it
+is omitted or blank, no `box` parameter is sent.
 
 `/schedule-volume` and `/schedule-mirror` create one Prefect deployment run.
 `/schedule-stackers` creates four one-time runs for levels 1, 2, 3, and 4 using

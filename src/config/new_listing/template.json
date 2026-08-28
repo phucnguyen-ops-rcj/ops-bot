@@ -10,6 +10,7 @@
             "label": "Arbitrage Strategy Config",
             "endpoint": "/setup_arbitrage_strategy",
             "body": {
+                "box": "T11",
                 "exchanges": "kucoin,gate",
                 "base_ccy": "BASE,BASE",
                 "quote": "USDT,USDT",
@@ -24,6 +25,7 @@
             "label": "Volume Config",
             "endpoint": "/setup_volume_config",
             "body": {
+                "box": "T11",
                 "market": "spot",
                 "tier": "b",
                 "base_ccy": "BASE",
@@ -37,6 +39,7 @@
             "label": "New Listing Config",
             "endpoint": "/setup_new_listing_config",
             "body": {
+                "box": "T11",
                 "exchange": "kucoin",
                 "market": "spot",
                 "symbol": "BASE-USDT",
@@ -59,6 +62,7 @@
             "label": "Set Symbol Config",
             "endpoint": "/set_symbol_config",
             "body": {
+                "box": "T11",
                 "base_currency": "BASE",
                 "quote_currency": "USDT",
                 "market": "spot",
@@ -74,6 +78,7 @@
             "label": "Create Gateway Config File",
             "endpoint": "/setup_new_listing_gateway",
             "body": {
+                "box": "T11",
                 "gateway_name": "emm_mirror_spot_gateway_custom_BASEUSDT",
                 "market": "spot",
                 "host": "0.0.0.0:45703",
@@ -85,6 +90,7 @@
             "label": "Register Gateway in Supervisorctl",
             "endpoint": "/setup_new_listing_gateway_supervisorctl",
             "body": {
+                "box": "T11",
                 "program_name": "mirror_spot_gateway_custom_BASEUSDT",
                 "config_path": "configcpp/exchangemm_PROD/mirror/spot/gateway/emm_mirror_spot_gateway_custom_BASEUSDT.txtpb"
             }
@@ -93,6 +99,7 @@
             "label": "Create Feed + Strategy Config Files",
             "endpoint": "/setup_listing_strategy_gateway_feed",
             "body": {
+                "box": "T11",
                 "base_ccy": "BASE",
                 "quote_ccy": "USDT",
                 "market": "spot",
@@ -104,6 +111,7 @@
             "label": "Register Feed in Supervisorctl",
             "endpoint": "/setup_new_listing_feed_supervisorctl",
             "body": {
+                "box": "T11",
                 "program_name": "feed_spot_custom_kucoin_BASEUSDT",
                 "config_path": "configcpp/exchangemm_PROD/feeds/spot/emm_spot_feed_custom_kucoin_BASEUSDT.txtpb"
             }
@@ -112,6 +120,7 @@
             "label": "Register Strategy in Supervisorctl",
             "endpoint": "/setup_new_listing_strategy_supervisorctl",
             "body": {
+                "box": "T11",
                 "program_name": "mirror_spot_listings_strat2_BASEUSDT",
                 "config_path": "configcpp/exchangemm_PROD/mirror/spot/strat2/emm_mirror_spot_strat2_BASEUSDT.txtpb"
             }

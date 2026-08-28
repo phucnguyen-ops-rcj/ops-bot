@@ -22,12 +22,14 @@ DEFAULT_PREFECT_SCHEDULE_TEMPLATE = """{
 SCHEDULE_VOLUME_TEMPLATE = """{
   "symbol": "KAIO",
   "quote_ccy": "USDT",
+  "box": "T11",
   "scheduled_time": "2026-05-22 09:30"
 }"""
 
 SCHEDULE_STACKERS_TEMPLATE = """{
   "symbol": "BILL",
   "quote_ccy": "USDT",
+  "box": "T11",
   "scheduled_time": "2026-05-22 09:30",
   "stacker_interval_minutes": 10
 }"""
@@ -39,6 +41,7 @@ SCHEDULE_MIRROR_TEMPLATE = """{
   "exchange": "kucoin",
   "market": "spot",
   "quote_ccy": "USDT",
+  "box": "T11",
   "scheduled_time": "2026-05-22 09:30"
 }"""
 
@@ -46,6 +49,7 @@ SCHEDULE_NEW_LISTING_TEMPLATE = """{
   "symbol": "BILL",
   "scheduled_time": "05:00",
   "quote_ccy": "USDT",
+  "box": "T11",
   "stacker_interval_minutes": 10
 }"""
 
@@ -196,6 +200,7 @@ class VolumeScheduleRequest:
     scheduled_time: datetime
     flow_run_name: str
     idempotency_key: str
+    box: str | None
     execution_mode: str | None
     ssh_host: str | None
 
@@ -207,6 +212,7 @@ class VolumeScheduleRequest:
             scheduled_time=_require_scheduled_time(payload),
             flow_run_name=_optional_text(payload.get("flow_run_name")) or "",
             idempotency_key=_optional_text(payload.get("idempotency_key")) or "",
+            box=_optional_text(payload.get("box")),
             execution_mode=_optional_text(payload.get("execution_mode")),
             ssh_host=_optional_text(payload.get("ssh_host")),
         )
@@ -220,6 +226,8 @@ class VolumeScheduleRequest:
             parameters["execution_mode"] = self.execution_mode
         if self.ssh_host:
             parameters["ssh_host"] = self.ssh_host
+        if self.box:
+            parameters["box"] = self.box
         return parameters
 
 
@@ -231,6 +239,7 @@ class StackerScheduleRequest:
     stacker_interval_minutes: int
     flow_run_name: str
     idempotency_key: str
+    box: str | None
     execution_mode: str | None
     ssh_host: str | None
 
@@ -243,6 +252,7 @@ class StackerScheduleRequest:
             stacker_interval_minutes=_positive_int(payload.get("stacker_interval_minutes"), default=10, field_name="stacker_interval_minutes"),
             flow_run_name=_optional_text(payload.get("flow_run_name")) or "",
             idempotency_key=_optional_text(payload.get("idempotency_key")) or "",
+            box=_optional_text(payload.get("box")),
             execution_mode=_optional_text(payload.get("execution_mode")),
             ssh_host=_optional_text(payload.get("ssh_host")),
         )
@@ -257,6 +267,8 @@ class StackerScheduleRequest:
             parameters["execution_mode"] = self.execution_mode
         if self.ssh_host:
             parameters["ssh_host"] = self.ssh_host
+        if self.box:
+            parameters["box"] = self.box
         return parameters
 
 
@@ -272,6 +284,7 @@ class MirrorScheduleRequest:
     scheduled_time: datetime
     flow_run_name: str
     idempotency_key: str
+    box: str | None
     execution_mode: str | None
     ssh_host: str | None
 
@@ -297,6 +310,7 @@ class MirrorScheduleRequest:
             scheduled_time=_require_scheduled_time(payload),
             flow_run_name=_optional_text(payload.get("flow_run_name")) or "",
             idempotency_key=_optional_text(payload.get("idempotency_key")) or "",
+            box=_optional_text(payload.get("box")),
             execution_mode=_optional_text(payload.get("execution_mode")),
             ssh_host=_optional_text(payload.get("ssh_host")),
         )
@@ -315,6 +329,8 @@ class MirrorScheduleRequest:
             parameters["execution_mode"] = self.execution_mode
         if self.ssh_host:
             parameters["ssh_host"] = self.ssh_host
+        if self.box:
+            parameters["box"] = self.box
         return parameters
 
 
@@ -325,6 +341,7 @@ class NewListingScheduleRequest:
     scheduled_time: datetime
     execution_mode: str | None
     ssh_host: str | None
+    box: str | None
     stacker_interval_minutes: int
     volume_delay_minutes: int
     mirror_delay_minutes: int
@@ -359,6 +376,7 @@ class NewListingScheduleRequest:
             scheduled_time=_require_scheduled_time(payload),
             execution_mode=_optional_text(payload.get("execution_mode")),
             ssh_host=_optional_text(payload.get("ssh_host")),
+            box=_optional_text(payload.get("box")),
             stacker_interval_minutes=stacker_interval_minutes,
             volume_delay_minutes=volume_delay_minutes,
             mirror_delay_minutes=mirror_delay_minutes,
@@ -702,6 +720,8 @@ def _create_new_listing_schedule_record(
             parameters["execution_mode"] = request.execution_mode
         if request.ssh_host:
             parameters["ssh_host"] = request.ssh_host
+        if request.box:
+            parameters["box"] = request.box
         flow_run, prefect_response = client.create_flow_run_with_response(
             stacker_deployment_id,
             scheduled_time=scheduled_time,
@@ -744,6 +764,8 @@ def _create_new_listing_schedule_record(
         volume_parameters["execution_mode"] = request.execution_mode
     if request.ssh_host:
         volume_parameters["ssh_host"] = request.ssh_host
+    if request.box:
+        volume_parameters["box"] = request.box
     volume_run, volume_response = client.create_flow_run_with_response(
         volume_deployment_id,
         scheduled_time=volume_time,
@@ -788,6 +810,8 @@ def _create_new_listing_schedule_record(
         mirror_parameters["execution_mode"] = request.execution_mode
     if request.ssh_host:
         mirror_parameters["ssh_host"] = request.ssh_host
+    if request.box:
+        mirror_parameters["box"] = request.box
     mirror_run, mirror_response = client.create_flow_run_with_response(
         mirror_deployment_id,
         scheduled_time=mirror_time,

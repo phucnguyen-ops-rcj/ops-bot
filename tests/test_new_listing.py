@@ -12,7 +12,7 @@ from ops_bot.new_listing.bot_service import (
     build_new_listing_config,
     handle_new_listing_command,
 )
-from ops_bot.new_listing.workflow import ApiResponse, print_response
+from ops_bot.new_listing.workflow import ApiResponse, print_response, run_new_listing
 from ops_bot.responses import BotResponse
 from ops_bot.new_listing.workflow import resolve_config_path
 from ops_bot.service import handle_user_message
@@ -70,6 +70,7 @@ def test_handle_new_listing_command_saves_config_and_trading_volume(
     response = handle_new_listing_command(
         {
             "symbol": "ATWO",
+            "box_name": " T11 ",
             "tier": "C",
             "create_new_gate_way": False,
             "price_decimals": 5,
@@ -97,6 +98,10 @@ def test_handle_new_listing_command_saves_config_and_trading_volume(
 
     config = json.loads(config_path.read_text(encoding="utf-8"))
     assert config["create_new_gate_way"] is False
+    assert payload["quote_currency"] == "USDT"
+    assert payload["box"] == "T11"
+    for step in ("1", "2", "3", "3b", "4", "5", "6", "7", "8"):
+        assert config["steps"][step]["body"]["box"] == "T11"
     assert config["steps"]["1"]["body"]["exchanges"] == "kucoin,gate"
     assert config["steps"]["2"]["body"]["market"] == "spot"
     assert config["steps"]["2"]["body"]["tier"] == "c"
@@ -270,6 +275,53 @@ def test_new_listing_request_uses_extracted_exchanges() -> None:
     assert config["steps"]["1"]["body"]["exchanges"] == "binance,kucoin,gate"
     assert config["steps"]["1"]["body"]["base_ccy"] == "ATWO,ATWO,ATWO"
     assert config["steps"]["1"]["body"]["quote"] == "USDT,USDT,USDT"
+    assert all("box" not in step["body"] for step in config["steps"].values())
+
+
+def test_new_listing_request_uses_custom_quote_currency_everywhere() -> None:
+    request = NewListingRequest.from_extracted(
+        {
+            "symbol": "atwo",
+            "quote_currency": " usdc ",
+            "tier": "C",
+            "price_decimals": 5,
+            "quantity_decimals": 1,
+            "feed_port": 41739,
+            "gateway_port": 45704,
+        }
+    )
+
+    config = build_new_listing_config(request)
+
+    assert request.quote_currency == "USDC"
+    assert config["steps"]["1"]["body"]["quote"] == "USDC,USDC"
+    assert config["steps"]["2"]["body"]["quote_ccy"] == "USDC"
+    assert config["steps"]["3"]["body"]["symbol"] == "ATWO-USDC"
+    assert config["steps"]["3b"]["body"]["quote_currency"] == "USDC"
+    assert config["steps"]["4"]["body"]["gateway_name"].endswith("ATWOUSDC")
+    assert config["steps"]["5"]["body"]["program_name"].endswith("ATWOUSDC")
+    assert config["steps"]["6"]["body"]["quote_ccy"] == "USDC"
+    assert config["steps"]["7"]["body"]["program_name"].endswith("ATWOUSDC")
+    assert config["steps"]["8"]["body"]["program_name"].endswith("ATWOUSDC")
+
+
+def test_new_listing_request_rejects_invalid_quote_currency() -> None:
+    extracted = {
+        "symbol": "ATWO",
+        "quote_currency": "USD-C",
+        "tier": "C",
+        "price_decimals": 5,
+        "quantity_decimals": 1,
+        "feed_port": 41739,
+        "gateway_port": 45704,
+    }
+
+    try:
+        NewListingRequest.from_extracted(extracted)
+    except ValueError as exc:
+        assert str(exc) == "quote_currency must contain only letters and numbers."
+    else:
+        raise AssertionError("Expected invalid quote_currency to be rejected")
 
 
 def test_resolve_config_path_uses_settings_dir(
@@ -304,3 +356,58 @@ def test_new_listing_print_response_strips_ssh_banner() -> None:
         )
 
     assert buffer.getvalue() == '\nStep 1 HTTP 200\n{"status":"ok"}\n'
+
+
+def test_new_listing_continues_after_http_409(monkeypatch, tmp_path) -> None:
+    request = NewListingRequest.from_extracted(
+        {
+            "symbol": "NIULAI",
+            "box_name": "T11",
+            "tier": "B",
+            "create_new_gate_way": False,
+            "price_decimals": 2,
+            "quantity_decimals": 2,
+            "feed_port": 41940,
+            "gateway_port": 45701,
+        }
+    )
+    config = build_new_listing_config(request)
+    config["logs_dir"] = str(tmp_path / "logs")
+    config["gateway_symbols_path"] = str(tmp_path / "gateway_symbols.yml")
+    config["update_gateway_symbols"] = False
+    called_endpoints: list[str] = []
+
+    def fake_post_json(
+        base_url,
+        endpoint,
+        payload,
+        timeout,
+        execution_mode,
+        ssh_host,
+    ):
+        called_endpoints.append(endpoint)
+        if endpoint == "/setup_arbitrage_strategy":
+            return 409, '{"code":409,"message":"Arbitrage config already exists"}'
+        if endpoint == "/setup_listing_strategy_gateway_feed":
+            return 200, '{"feed_action":"created feed"}'
+        return 200, '{"status":"ok"}'
+
+    monkeypatch.setattr("ops_bot.new_listing.workflow.require_token", lambda: "token")
+    monkeypatch.setattr("ops_bot.new_listing.workflow.post_json", fake_post_json)
+
+    log_path = run_new_listing(config)
+
+    assert called_endpoints == [
+        "/setup_arbitrage_strategy",
+        "/setup_volume_config",
+        "/setup_new_listing_config",
+        "/setup_listing_strategy_gateway_feed",
+        "/setup_new_listing_feed_supervisorctl",
+        "/setup_new_listing_strategy_supervisorctl",
+    ]
+    assert "Status: 409" in log_path.read_text(encoding="utf-8")
+
+
+def test_api_response_cannot_continue_after_other_error_statuses() -> None:
+    assert ApiResponse(step="1", status=409, body="conflict").can_continue is True
+    assert ApiResponse(step="1", status=500, body="error").can_continue is False

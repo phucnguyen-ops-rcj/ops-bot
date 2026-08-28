@@ -15,6 +15,7 @@ from ops_bot.responses import BotResponse
 from ops_bot.settings import app_settings
 
 SETUP_STACKERS_INPUT_TEMPLATE = """{
+  "box": "T11",
   "base_ccy": "SHARE",
   "quote_ccy": "USDT",
   "market": "spot",
@@ -46,6 +47,7 @@ SETUP_STACKERS_INPUT_TEMPLATE = """{
 }"""
 
 UPDATE_STACKERS_INPUT_TEMPLATE = """{
+  "box": "T11",
   "exchanges": "kucoin",
   "base_ccy": "RAVE",
   "quote_ccy": "USDT",
@@ -174,6 +176,7 @@ class GeneralConfig:
 
 @dataclass(frozen=True)
 class StackerSetupRequest:
+    box: str | None
     base_ccy: str
     quote_ccy: str
     market: str
@@ -186,6 +189,7 @@ class StackerSetupRequest:
 
     @classmethod
     def from_payload(cls, payload: dict[str, Any]) -> "StackerSetupRequest":
+        box = _optional_text(payload.get("box"))
         base_ccy = _require_text(payload, "base_ccy").upper()
         quote_ccy = _require_text(payload, "quote_ccy").upper()
         market = _require_text(payload, "market").lower()
@@ -193,6 +197,7 @@ class StackerSetupRequest:
         feed_host = _require_text(payload, "feed_host")
         gateway_host = _require_text(payload, "gateway_host")
         return cls(
+            box=box,
             base_ccy=base_ccy,
             quote_ccy=quote_ccy,
             market=market,
@@ -207,6 +212,7 @@ class StackerSetupRequest:
 
 @dataclass(frozen=True)
 class StackerUpdateRequest:
+    box: str | None
     exchanges: str
     base_ccy: str
     quote_ccy: str
@@ -216,6 +222,7 @@ class StackerUpdateRequest:
 
     @classmethod
     def from_payload(cls, payload: dict[str, Any]) -> "StackerUpdateRequest":
+        box = _optional_text(payload.get("box"))
         exchanges = _require_text(payload, "exchanges").lower()
         base_ccy = _require_text(payload, "base_ccy").upper()
         quote_ccy = _require_text(payload, "quote_ccy").upper()
@@ -233,6 +240,7 @@ class StackerUpdateRequest:
                 + "."
             )
         return cls(
+            box=box,
             exchanges=exchanges,
             base_ccy=base_ccy,
             quote_ccy=quote_ccy,
@@ -321,7 +329,7 @@ def build_stacker_request_body(request: StackerSetupRequest) -> dict[str, Any]:
         price_decimals=request.general.price_decimals,
         quantity_decimals=4,
     )
-    return {
+    body = {
         "exchanges": request.exchanges,
         "base_ccy": request.base_ccy,
         "quote_ccy": request.quote_ccy,
@@ -337,6 +345,9 @@ def build_stacker_request_body(request: StackerSetupRequest) -> dict[str, Any]:
         "buy_stackers": _stackers_proto_string(buy_stackers, request.general.price_decimals),
         "sell_stackers": _stackers_proto_string(sell_stackers, request.general.price_decimals),
     }
+    if request.box is not None:
+        body["box"] = request.box
+    return body
 
 
 def build_stacker_update_request_body(request: StackerUpdateRequest) -> dict[str, Any]:
@@ -345,6 +356,8 @@ def build_stacker_update_request_body(request: StackerUpdateRequest) -> dict[str
         "base_ccy": request.base_ccy,
         "quote_ccy": request.quote_ccy,
     }
+    if request.box is not None:
+        body["box"] = request.box
     for key, value in request.updates.items():
         if value is not None:
             body[key] = value
@@ -566,6 +579,13 @@ def _require_text(payload: dict[str, Any], key: str) -> str:
     if not normalized:
         raise ValueError(f"Missing required field: {key}")
     return normalized
+
+
+def _optional_text(value: Any) -> str | None:
+    if value is None:
+        return None
+    normalized = str(value).strip()
+    return normalized or None
 
 
 def _require_object(payload: dict[str, Any], key: str) -> dict[str, Any]:

@@ -4,7 +4,13 @@ import asyncio
 import json
 from pathlib import Path
 
-from ops_bot.prefect_schedules.bot_service import PrefectApiClient, PrefectApiResponse
+from ops_bot.prefect_schedules.bot_service import (
+    MirrorScheduleRequest,
+    PrefectApiClient,
+    PrefectApiResponse,
+    StackerScheduleRequest,
+    VolumeScheduleRequest,
+)
 from ops_bot.responses import BotResponse
 from ops_bot.service import handle_user_message
 
@@ -88,6 +94,7 @@ def test_schedule_stacker_batch_run(monkeypatch, tmp_path: Path) -> None:
             """/schedule-stackers
 {
   "symbol": "BILL",
+  "box": "T11",
   "scheduled_time": "2099-05-22 09:30",
   "stacker_interval_minutes": 7
 }"""
@@ -97,6 +104,7 @@ def test_schedule_stacker_batch_run(monkeypatch, tmp_path: Path) -> None:
     assert isinstance(response, BotResponse)
     assert len(calls) == 4
     assert [call["parameters"]["stacker_level"] for call in calls] == [1, 2, 3, 4]
+    assert [call["parameters"]["box"] for call in calls] == ["T11"] * 4
     assert [call["scheduled_time"] for call in calls] == [
         "2099-05-22 09:30",
         "2099-05-22 09:37",
@@ -171,6 +179,7 @@ def test_schedule_new_listing_creates_staggered_runs(monkeypatch, tmp_path: Path
             """/schedule-new-listing
 {
   "symbol": "BILL",
+  "box": "T11",
   "scheduled_time": "2099-05-22 05:00"
 }"""
         )
@@ -187,9 +196,36 @@ def test_schedule_new_listing_creates_staggered_runs(monkeypatch, tmp_path: Path
         "2099-05-22 07:00",
     ]
     assert [call["parameters"].get("stacker_level") for call in calls[:4]] == [1, 2, 3, 4]
+    assert [call["parameters"]["box"] for call in calls] == ["T11"] * 6
     assert 'flow_run_ids:\n  ["run-1", "run-2", "run-3", "run-4", "run-5", "run-6"]' in response.message
     assert "kind=volume" in response.message
     assert "kind=mirror" in response.message
+
+
+def test_launch_flow_box_is_optional() -> None:
+    base_payload = {
+        "symbol": "KAIO",
+        "scheduled_time": "2099-05-22 09:30",
+    }
+
+    without_box = (
+        VolumeScheduleRequest.from_payload(base_payload).deployment_parameters(),
+        StackerScheduleRequest.from_payload(base_payload).deployment_parameters(
+            stacker_level=1
+        ),
+        MirrorScheduleRequest.from_payload(base_payload).deployment_parameters(),
+    )
+    assert all("box" not in parameters for parameters in without_box)
+
+    with_box_payload = {**base_payload, "box": " T11 "}
+    with_box = (
+        VolumeScheduleRequest.from_payload(with_box_payload).deployment_parameters(),
+        StackerScheduleRequest.from_payload(with_box_payload).deployment_parameters(
+            stacker_level=1
+        ),
+        MirrorScheduleRequest.from_payload(with_box_payload).deployment_parameters(),
+    )
+    assert all(parameters["box"] == "T11" for parameters in with_box)
 
 
 def test_remove_schedules_accepts_explicit_flow_run_ids(monkeypatch, tmp_path: Path) -> None:

@@ -33,6 +33,10 @@ class ApiResponse:
     def ok(self) -> bool:
         return 200 <= self.status < 300
 
+    @property
+    def can_continue(self) -> bool:
+        return self.ok or self.status == 409
+
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
@@ -235,7 +239,11 @@ def run_step(
     logger.info("Step %s finished with HTTP %s", step, status)
     print_response(response)
     write_step_log(log_path, step, step_config, response, dry_run=False)
-    if not response.ok:
+    if response.status == 409:
+        logger.warning(
+            "Step %s returned HTTP 409; continuing with the next step.", step
+        )
+    if not response.can_continue:
         raise RuntimeError(f"Step {step} failed with HTTP {status}.")
     return response
 

@@ -44,6 +44,7 @@ def test_setup_stackers_builds_and_saves_request_body(
 
     message = """/setup-stackers-dryrun
 {
+  "box": " T11 ",
   "base_ccy": "SHARE",
   "quote_ccy": "USDT",
   "market": "spot",
@@ -79,6 +80,7 @@ def test_setup_stackers_builds_and_saves_request_body(
     assert isinstance(response, BotResponse)
     body = json.loads(response.message)
     assert body["base_ccy"] == "SHARE"
+    assert body["box"] == "T11"
     assert body["tick_size"] == 0.00001
     assert body["quantity_step_size"] == 0.1
     assert body["buy_stackers"] == (
@@ -178,6 +180,7 @@ def test_setup_stackers_executes_api_in_real_mode(
     assert captured["endpoint"] == "/setup_stacker_config"
     payload = captured["payload"]
     assert isinstance(payload, dict)
+    assert "box" not in payload
     assert payload["buy_stackers"] == "[{price: 0.00201 original_quantity: 1400.0000}]"
     assert payload["sell_stackers"] == "[{price: 1.12500 original_quantity: 202.5000}]"
 
@@ -345,6 +348,7 @@ def test_update_stackers_builds_dry_run_body(
 
     message = """/update-stackers-dryrun
 {
+  "box": " T11 ",
   "exchanges": "kucoin",
   "base_ccy": "RAVE",
   "quote_ccy": "USDT",
@@ -373,6 +377,7 @@ def test_update_stackers_builds_dry_run_body(
     assert body["exchanges"] == "kucoin"
     assert body["base_ccy"] == "RAVE"
     assert body["quote_ccy"] == "USDT"
+    assert body["box"] == "T11"
     assert body["max_price"] == 10.0
     assert body["tick_size"] == 0.00001
     assert body["buy_stackers"] == "[{price: 0.00101 original_quantity: 2800.0000}]"

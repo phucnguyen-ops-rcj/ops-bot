@@ -22,6 +22,8 @@ TIER_VOLUME_REQUIREMENTS = {
 
 NEW_LISTING_INPUT_TEMPLATE = """/new-listing
 symbol: ATWO
+quote currency: USDT
+box: T11
 market: spot
 exchanges: kucoin,gate
 tier: C
@@ -35,6 +37,7 @@ gateway port: 45704"""
 @dataclass(frozen=True)
 class NewListingRequest:
     symbol: str
+    box: str | None
     market: str
     exchanges: str
     tier: str
@@ -43,10 +46,15 @@ class NewListingRequest:
     quantity_decimals: int
     feed_port: int
     gateway_port: int
+    quote_currency: str = "USDT"
 
     @classmethod
     def from_extracted(cls, extracted: dict[str, Any]) -> "NewListingRequest":
         symbol = _require_text(extracted, "symbol").upper()
+        quote_currency = _optional_currency(extracted.get("quote_currency"))
+        box = _optional_preserved_text(
+            extracted.get("box", extracted.get("box_name"))
+        )
         market = _optional_text(extracted.get("market")) or "spot"
         exchanges = _optional_exchanges(extracted.get("exchanges"))
         tier = _require_text(extracted, "tier").upper()
@@ -66,6 +74,8 @@ class NewListingRequest:
 
         return cls(
             symbol=symbol,
+            quote_currency=quote_currency,
+            box=box,
             market=market,
             exchanges=exchanges,
             tier=tier,
@@ -76,6 +86,7 @@ class NewListingRequest:
             gateway_port=gateway_port,
         )
 
+
 def handle_new_listing_command(extracted: dict[str, Any], *, dry_run: bool) -> BotResponse:
     request = NewListingRequest.from_extracted(extracted)
     config = build_new_listing_config(request)
@@ -85,6 +96,7 @@ def handle_new_listing_command(extracted: dict[str, Any], *, dry_run: bool) -> B
 
     summary = {
         "symbol": request.symbol,
+        "quote_currency": request.quote_currency,
         "market": request.market,
         "tier": request.tier,
         "exchanges": request.exchanges,
@@ -103,6 +115,8 @@ def handle_new_listing_command(extracted: dict[str, Any], *, dry_run: bool) -> B
         ),
         "mode": "dry-run" if dry_run else "real",
     }
+    if request.box is not None:
+        summary["box"] = request.box
     message = "\n".join(
         [
             json.dumps(summary, separators=(",", ":"), ensure_ascii=False),
@@ -119,13 +133,13 @@ def handle_new_listing_command(extracted: dict[str, Any], *, dry_run: bool) -> B
 def build_new_listing_config(request: NewListingRequest) -> dict[str, Any]:
     price_tick = _decimal_tick(request.price_decimals)
     qty_unit = _decimal_tick(request.quantity_decimals)
-    compact_symbol = f"{request.symbol}USDT"
+    compact_symbol = f"{request.symbol}{request.quote_currency}"
     step6_feed_port = request.feed_port + 1
     exchange_count = len(request.exchanges.split(","))
     base_ccy = ",".join([request.symbol] * exchange_count)
-    quote = ",".join(["USDT"] * exchange_count)
+    quote = ",".join([request.quote_currency] * exchange_count)
 
-    return {
+    config = {
         "base_endpoint": "http://18.176.93.228",
         "timeout_seconds": 60,
         "create_new_gate_way": request.create_new_gate_way,
@@ -154,7 +168,7 @@ def build_new_listing_config(request: NewListingRequest) -> dict[str, Any]:
                     "market": request.market,
                     "tier": request.tier.lower(),
                     "base_ccy": request.symbol,
-                    "quote_ccy": "USDT",
+                    "quote_ccy": request.quote_currency,
                     "price_tick": price_tick,
                     "price_tick_size": request.price_decimals,
                     "qty_unit": qty_unit,
@@ -166,7 +180,7 @@ def build_new_listing_config(request: NewListingRequest) -> dict[str, Any]:
                 "body": {
                     "exchange": "kucoin",
                     "market": request.market,
-                    "symbol": f"{request.symbol}-USDT",
+                    "symbol": f"{request.symbol}-{request.quote_currency}",
                     "strategy": "slow_mm",
                     "tier": request.tier,
                     "mode": "stacker",
@@ -187,7 +201,7 @@ def build_new_listing_config(request: NewListingRequest) -> dict[str, Any]:
                 "endpoint": "/set_symbol_config",
                 "body": {
                     "base_currency": request.symbol,
-                    "quote_currency": "USDT",
+                    "quote_currency": request.quote_currency,
                     "market": request.market,
                     "price_tick": price_tick,
                     "size_tick": qty_unit,
@@ -224,7 +238,7 @@ def build_new_listing_config(request: NewListingRequest) -> dict[str, Any]:
                 "endpoint": "/setup_listing_strategy_gateway_feed",
                 "body": {
                     "base_ccy": request.symbol,
-                    "quote_ccy": "USDT",
+                    "quote_ccy": request.quote_currency,
                     "market": request.market,
                     "gateway_host": f"localhost:{request.gateway_port}",
                     "feed_host": f"localhost:{step6_feed_port}",
@@ -254,6 +268,10 @@ def build_new_listing_config(request: NewListingRequest) -> dict[str, Any]:
             },
         },
     }
+    if request.box is not None:
+        for step in ("1", "2", "3", "3b", "4", "5", "6", "7", "8"):
+            config["steps"][step]["body"]["box"] = request.box
+    return config
 
 
 def save_new_listing_config(config: dict[str, Any]) -> Path:
@@ -359,6 +377,22 @@ def _optional_text(value: Any) -> str | None:
         return None
     normalized = str(value).strip()
     return normalized.lower() or None
+
+
+def _optional_currency(value: Any) -> str:
+    if value is None or not str(value).strip():
+        return "USDT"
+    currency = str(value).strip().upper()
+    if not re.fullmatch(r"[A-Z0-9]+", currency):
+        raise ValueError("quote_currency must contain only letters and numbers.")
+    return currency
+
+
+def _optional_preserved_text(value: Any) -> str | None:
+    if value is None:
+        return None
+    normalized = str(value).strip()
+    return normalized or None
 
 
 def _optional_exchanges(value: Any) -> str:

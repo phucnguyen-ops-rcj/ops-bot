@@ -39,6 +39,8 @@ class StackerStatusExtraction {
 
 class NewListingExtraction {
   symbol string?
+  quote_currency string?
+  box_name string? @alias("box")
   market string?
   exchanges string?
   tier string?
@@ -197,6 +199,8 @@ function ExtractNewListingRequest(user_question: string) -> NewListingExtraction
 
     Rules:
     - symbol is required.
+    - quote_currency is optional and defaults to USDT. Normalize it to uppercase.
+    - box is optional. Preserve the provided box name, such as T11.
     - market is optional and defaults to spot.
     - exchanges is optional and defaults to kucoin,gate. Extract explicit
       input like `exchanges: "binance,kucoin"` as `binance,kucoin`.
