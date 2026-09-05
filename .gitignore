@@ -7,3 +7,6 @@ __pycache__/
 *.egg-info/
 signal_groups.yml
 .docker-data/
+.idea/
+*.DS_Store
+*.png

@@ -1,0 +1,120 @@
+{
+    "base_endpoint": "http://18.176.93.228",
+    "timeout_seconds": 60,
+    "create_new_gate_way": false,
+    "logs_dir": "logs/new_listing",
+    "gateway_symbols_path": "src/config/new_listing/gateway_symbols.yml",
+    "update_gateway_symbols": true,
+    "steps": {
+        "1": {
+            "label": "Arbitrage Strategy Config",
+            "endpoint": "/setup_arbitrage_strategy",
+            "body": {
+                "exchanges": "kucoin,gate",
+                "base_ccy": "ATWO,ATWO",
+                "quote": "USDT,USDT",
+                "market": "spot",
+                "taker_arb_min_bps": 20,
+                "maker_arb_min_bps": 20000,
+                "max_order_amount": 50,
+                "min_order_amount": 20
+            }
+        },
+        "2": {
+            "label": "Volume Config",
+            "endpoint": "/setup_volume_config",
+            "body": {
+                "market": "spot",
+                "tier": "c",
+                "base_ccy": "ATWO",
+                "quote_ccy": "USDT",
+                "price_tick": 0.00001,
+                "price_tick_size": 5,
+                "qty_unit": 0.1
+            }
+        },
+        "3": {
+            "label": "New Listing Config",
+            "endpoint": "/setup_new_listing_config",
+            "body": {
+                "exchange": "kucoin",
+                "market": "spot",
+                "symbol": "ATWO-USDT",
+                "strategy": "slow_mm",
+                "tier": "C",
+                "mode": "stacker",
+                "hedge": "false",
+                "auto_start": "true",
+                "auto_restart": "true",
+                "auto_config": "true",
+                "model": "crossover_vol",
+                "vol_param": "1.0",
+                "trading_intensity_param": "1.0",
+                "auto_start_ms": "1800000",
+                "auto_restart_ms": "1209600000",
+                "auto_config_ms": "1209600000"
+            }
+        },
+        "3b": {
+            "label": "Set Symbol Config",
+            "endpoint": "/set_symbol_config",
+            "body": {
+                "base_currency": "ATWO",
+                "quote_currency": "USDT",
+                "market": "spot",
+                "price_tick": 0.00001,
+                "size_tick": 0.1,
+                "min_size": 10,
+                "multiplier": 1,
+                "contract_size": 1,
+                "first_date": 1735822800000
+            }
+        },
+        "4": {
+            "label": "Create Gateway Config File",
+            "endpoint": "/setup_new_listing_gateway",
+            "body": {
+                "gateway_name": "emm_mirror_spot_gateway_custom_ATWOUSDT",
+                "market": "spot",
+                "host": "0.0.0.0:45704",
+                "feed_host": "0.0.0.0:41739",
+                "account_id": "ktfsmc15"
+            }
+        },
+        "5": {
+            "label": "Register Gateway in Supervisorctl",
+            "endpoint": "/setup_new_listing_gateway_supervisorctl",
+            "body": {
+                "program_name": "mirror_spot_gateway_custom_ATWOUSDT",
+                "config_path": "configcpp/exchangemm_PROD/mirror/spot/gateway/emm_mirror_spot_gateway_custom_ATWOUSDT.txtpb"
+            }
+        },
+        "6": {
+            "label": "Create Feed + Strategy Config Files",
+            "endpoint": "/setup_listing_strategy_gateway_feed",
+            "body": {
+                "base_ccy": "ATWO",
+                "quote_ccy": "USDT",
+                "market": "spot",
+                "gateway_host": "localhost:45704",
+                "feed_host": "localhost:41740"
+            }
+        },
+        "7": {
+            "label": "Register Feed in Supervisorctl",
+            "endpoint": "/setup_new_listing_feed_supervisorctl",
+            "body": {
+                "program_name": "feed_spot_custom_kucoin_ATWOUSDT",
+                "config_path": "configcpp/exchangemm_PROD/feeds/spot/emm_spot_feed_custom_kucoin_ATWOUSDT.txtpb"
+            }
+        },
+        "8": {
+            "label": "Register Strategy in Supervisorctl",
+            "endpoint": "/setup_new_listing_strategy_supervisorctl",
+            "body": {
+                "program_name": "mirror_spot_listings_strat2_ATWOUSDT",
+                "config_path": "configcpp/exchangemm_PROD/mirror/spot/strat2/emm_mirror_spot_strat2_ATWOUSDT.txtpb"
+            }
+        }
+    }
+}
