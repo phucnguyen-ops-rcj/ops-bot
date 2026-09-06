@@ -38,6 +38,10 @@ gateway port: 45704
 Keyword routing also exists for health, balance, transfer, monitor,
 `volume-fills`, and `stackers-status` messages.
 
+`/health` and `/ping` are handled deterministically without BAML extraction.
+They call `GET /health` directly, avoiding LLM latency and classification
+variability for these parameterless commands.
+
 `/volume-fills` posts to `/get_volume_strategy_fills` using
 `base_currency`/`quote_currency` derived from the symbol. `/stackers-status`
 posts to `/get_stacker_accepted_orders` using the normalized symbol. Both

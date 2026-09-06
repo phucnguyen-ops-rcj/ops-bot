@@ -111,7 +111,14 @@ async def handle_user_message(
         except ValueError as exc:
             return str(exc)
 
-    extracted = await extract_params(routed.agent, routed.question)
+    # Health commands have no parameters. Routing has already established that
+    # this is a health request, so involving an LLM here only adds latency and
+    # can make deterministic commands fail due to extraction variability.
+    extracted = (
+        {}
+        if routed.agent == "health"
+        else await extract_params(routed.agent, routed.question)
+    )
     missing_fields = [field for field in extracted.get("missing_fields", []) if field]
     if missing_fields:
         return f"Missing required field(s): {', '.join(missing_fields)}"

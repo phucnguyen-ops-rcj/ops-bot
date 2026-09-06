@@ -4,6 +4,7 @@ import asyncio
 
 import pytest
 
+from ops_bot.clients.ops_api import OpsApiResponse
 from ops_bot.ops_requests import build_ops_call
 from ops_bot.routing import route_message
 from ops_bot.service import _format_response, handle_user_message
@@ -22,6 +23,32 @@ def test_route_balance_keyword() -> None:
 
     assert routed is not None
     assert routed.agent == "balance"
+
+
+def test_ping_bypasses_parameter_extraction(monkeypatch) -> None:
+    async def fail_extract_params(*_args, **_kwargs):
+        raise AssertionError("health commands must not use BAML extraction")
+
+    class FakeOpsClient:
+        def request(self, **kwargs):
+            assert kwargs == {
+                "method": "GET",
+                "endpoint": "/health",
+                "payload": {},
+                "authenticated": False,
+            }
+            return OpsApiResponse(
+                endpoint="/health",
+                status=200,
+                body='{"ok":true}',
+                payload={},
+            )
+
+    monkeypatch.setattr("ops_bot.service.extract_params", fail_extract_params)
+
+    assert asyncio.run(handle_user_message("/ping", client=FakeOpsClient())) == (
+        '{"ok":true}'
+    )
 
 
 def test_route_volume_fills_slash_command() -> None:
