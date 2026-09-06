@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import base64
 import json
 import re
 import urllib.error
@@ -79,9 +80,17 @@ class PrefectApiClient:
     def __init__(
         self,
         api_url: str = app_settings.prefect_api_url,
+        auth_string: str = app_settings.prefect_api_auth_string,
         timeout_seconds: int = app_settings.prefect_timeout_seconds,
     ) -> None:
-        self.api_url = api_url.rstrip("/")
+        self.api_url = api_url.strip().rstrip("/")
+        if not self.api_url:
+            raise ValueError("PREFECT_API_URL is not set.")
+        self.auth_string = auth_string.strip()
+        if self.auth_string and ":" not in self.auth_string:
+            raise ValueError(
+                "PREFECT_API_AUTH_STRING must use username:password format."
+            )
         self.timeout_seconds = timeout_seconds
 
     def read_deployment_by_name(self, flow_name: str, deployment_name: str) -> dict[str, Any]:
@@ -175,11 +184,18 @@ class PrefectApiClient:
         endpoint: str,
         payload: dict[str, Any] | None = None,
     ) -> PrefectApiResponse:
+        headers = {"Content-Type": "application/json"}
+        if self.auth_string:
+            encoded_credentials = base64.b64encode(
+                self.auth_string.encode("utf-8")
+            ).decode("ascii")
+            headers["Authorization"] = f"Basic {encoded_credentials}"
+
         request = urllib.request.Request(
             f"{self.api_url}{endpoint}",
             data=json.dumps(payload).encode("utf-8") if payload is not None else None,
             method=method,
-            headers={"Content-Type": "application/json"},
+            headers=headers,
         )
         try:
             with urllib.request.urlopen(request, timeout=self.timeout_seconds) as response:

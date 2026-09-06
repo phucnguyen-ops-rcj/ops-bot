@@ -95,7 +95,16 @@ Set secrets in `.env` for local/Docker runs, or in your service manager:
 ```env
 OPENAI_API_KEY=sk-...
 RCJ_OPS_BEARER_TOKEN=...
+PREFECT_API_URL=http://prefect.example:4200/api
+PREFECT_API_AUTH_STRING=admin:change-me
+PREFECT_UI_URL=http://prefect.example:4200
 ```
+
+`PREFECT_API_URL` is required only when using the scheduling commands and must
+include Prefect's `/api` suffix. `PREFECT_UI_URL` is optional and is used to
+build flow-run links in Signal responses. If the Prefect server sets
+`PREFECT_SERVER_API_AUTH_STRING`, set `PREFECT_API_AUTH_STRING` on this bot to
+the same `username:password` value.
 
 When using `.env` with `docker run --env-file`, prefer unquoted values:
 

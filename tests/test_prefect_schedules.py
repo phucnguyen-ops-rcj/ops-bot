@@ -295,7 +295,9 @@ def test_prefect_deployment_lookup_uses_name_endpoint(monkeypatch) -> None:
 
     monkeypatch.setattr(PrefectApiClient, "_request", fake_request)
 
-    result = PrefectApiClient().read_deployment_by_name(
+    result = PrefectApiClient(
+        api_url="http://prefect.test:4200/api"
+    ).read_deployment_by_name(
         "Start Volume Strategy",
         "volume-start-strategy",
     )
@@ -304,6 +306,42 @@ def test_prefect_deployment_lookup_uses_name_endpoint(monkeypatch) -> None:
     assert calls == [
         "/deployments/name/Start%20Volume%20Strategy/volume-start-strategy",
     ]
+
+
+def test_prefect_api_client_sends_basic_auth(monkeypatch) -> None:
+    captured_request = None
+
+    class FakeHttpResponse:
+        status = 200
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *_args):
+            return None
+
+        def read(self):
+            return b"{}"
+
+    def fake_urlopen(request, timeout):
+        nonlocal captured_request
+        captured_request = request
+        assert timeout == 30
+        return FakeHttpResponse()
+
+    monkeypatch.setattr("urllib.request.urlopen", fake_urlopen)
+
+    client = PrefectApiClient(
+        api_url="http://prefect.test:4200/api",
+        auth_string="admin:test-password",
+    )
+    response = client._request("GET", "/health")
+
+    assert response.status == 200
+    assert captured_request is not None
+    assert captured_request.get_header("Authorization") == (
+        "Basic YWRtaW46dGVzdC1wYXNzd29yZA=="
+    )
 
 
 def test_schedule_logs_prefect_lookup_failure(monkeypatch, tmp_path: Path) -> None:
