@@ -168,12 +168,12 @@ docker run -d --name rcj-ops-bot \
   rcj-ops-bot:latest
 
 # in zeabur
-docker run -d --name rcj-ops-bot \
-  --env-file .env \
-  -v "/root/.ssh:/home/opsbot/.ssh:ro" \
-  -v "$(pwd)/.docker-data:/data" \
-  --restart unless-stopped \
-  rcj-ops-bot:latest
+  docker run -d --name rcj-ops-bot \
+    --env-file .env \
+    -v "/root/rcj/secrets/ops-bot-ssh:/home/opsbot/.ssh:ro" \
+    -v "/root/rcj/ops-bot/.docker-data:/data" \
+    --restart unless-stopped \
+    rcj-ops-bot:latest
 ```
 
 One-line version:
