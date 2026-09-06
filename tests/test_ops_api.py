@@ -23,7 +23,7 @@ class _FakeHttpResponse:
 def test_ops_api_request_appends_shared_log(monkeypatch, tmp_path) -> None:
     log_path = tmp_path / "ops_api.log"
     monkeypatch.setattr(
-        "ops_bot.clients.ops_api.get_settings",
+        "ops-bot.clients.ops_api.get_settings",
         lambda: SimpleNamespace(
             rcj_ops_bearer_token="token",
             ops_api_log_path=log_path,

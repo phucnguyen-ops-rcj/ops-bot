@@ -47,23 +47,23 @@ def test_handle_new_listing_command_saves_config_and_trading_volume(
     trading_volume_path = tmp_path / "trading_volume.json"
 
     monkeypatch.setattr(
-        "ops_bot.new_listing.bot_service.app_settings.new_listing_config_dir",
+        "ops-bot.new_listing.bot_service.app_settings.new_listing_config_dir",
         config_dir,
     )
     monkeypatch.setattr(
-        "ops_bot.new_listing.bot_service.app_settings.new_listing_logs_dir",
+        "ops-bot.new_listing.bot_service.app_settings.new_listing_logs_dir",
         logs_dir,
     )
     monkeypatch.setattr(
-        "ops_bot.new_listing.bot_service.app_settings.new_listing_gateway_symbols_path",
+        "ops-bot.new_listing.bot_service.app_settings.new_listing_gateway_symbols_path",
         gateway_symbols_path,
     )
     monkeypatch.setattr(
-        "ops_bot.new_listing.bot_service.app_settings.new_listing_trading_volume_path",
+        "ops-bot.new_listing.bot_service.app_settings.new_listing_trading_volume_path",
         trading_volume_path,
     )
     monkeypatch.setattr(
-        "ops_bot.new_listing.bot_service.app_settings.new_listing_account_id",
+        "ops-bot.new_listing.bot_service.app_settings.new_listing_account_id",
         "ktfsmc15",
     )
 
@@ -125,19 +125,19 @@ def test_handle_new_listing_command_includes_dry_run_preview(
     trading_volume_path = tmp_path / "trading_volume.json"
 
     monkeypatch.setattr(
-        "ops_bot.new_listing.bot_service.app_settings.new_listing_config_dir",
+        "ops-bot.new_listing.bot_service.app_settings.new_listing_config_dir",
         config_dir,
     )
     monkeypatch.setattr(
-        "ops_bot.new_listing.bot_service.app_settings.new_listing_logs_dir",
+        "ops-bot.new_listing.bot_service.app_settings.new_listing_logs_dir",
         logs_dir,
     )
     monkeypatch.setattr(
-        "ops_bot.new_listing.bot_service.app_settings.new_listing_gateway_symbols_path",
+        "ops-bot.new_listing.bot_service.app_settings.new_listing_gateway_symbols_path",
         gateway_symbols_path,
     )
     monkeypatch.setattr(
-        "ops_bot.new_listing.bot_service.app_settings.new_listing_trading_volume_path",
+        "ops-bot.new_listing.bot_service.app_settings.new_listing_trading_volume_path",
         trading_volume_path,
     )
 
@@ -188,7 +188,7 @@ def test_update_trading_volume_keeps_all_exchange_requirements_consistent(
         encoding="utf-8",
     )
     monkeypatch.setattr(
-        "ops_bot.new_listing.bot_service.app_settings.new_listing_trading_volume_path",
+        "ops-bot.new_listing.bot_service.app_settings.new_listing_trading_volume_path",
         trading_volume_path,
     )
 
@@ -216,15 +216,15 @@ def test_handle_new_listing_command_real_mode_runs_workflow(monkeypatch) -> None
     calls: list[bool] = []
 
     monkeypatch.setattr(
-        "ops_bot.new_listing.bot_service.save_new_listing_config",
+        "ops-bot.new_listing.bot_service.save_new_listing_config",
         lambda _config: Path("src/config/new_listing/ATWO.json"),
     )
     monkeypatch.setattr(
-        "ops_bot.new_listing.bot_service.update_trading_volume_file",
+        "ops-bot.new_listing.bot_service.update_trading_volume_file",
         lambda _request: Path("/tmp/trading_volume.json"),
     )
     monkeypatch.setattr(
-        "ops_bot.new_listing.bot_service._run_listing",
+        "ops-bot.new_listing.bot_service._run_listing",
         lambda _config, *, dry_run: (
             calls.append(dry_run) or "real output",
             Path("logs/new_listing/ATWO_test.log"),
@@ -332,7 +332,7 @@ def test_resolve_config_path_uses_settings_dir(
     config_dir.mkdir()
     (config_dir / "ATWO.json").write_text("{}", encoding="utf-8")
     monkeypatch.setattr(
-        "ops_bot.new_listing.workflow.app_settings.new_listing_config_dir",
+        "ops-bot.new_listing.workflow.app_settings.new_listing_config_dir",
         config_dir,
     )
 
@@ -392,8 +392,8 @@ def test_new_listing_continues_after_http_409(monkeypatch, tmp_path) -> None:
             return 200, '{"feed_action":"created feed"}'
         return 200, '{"status":"ok"}'
 
-    monkeypatch.setattr("ops_bot.new_listing.workflow.require_token", lambda: "token")
-    monkeypatch.setattr("ops_bot.new_listing.workflow.post_json", fake_post_json)
+    monkeypatch.setattr("ops-bot.new_listing.workflow.require_token", lambda: "token")
+    monkeypatch.setattr("ops-bot.new_listing.workflow.post_json", fake_post_json)
 
     log_path = run_new_listing(config)
 

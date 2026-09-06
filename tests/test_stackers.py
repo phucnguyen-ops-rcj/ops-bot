@@ -28,17 +28,17 @@ def test_setup_stackers_builds_and_saves_request_body(
     config_dir = tmp_path / "stackers" / "config"
     logs_dir = tmp_path / "stackers" / "logs"
     monkeypatch.setattr(
-        "ops_bot.stackers.bot_service.app_settings.stacker_config_dir",
+        "ops-bot.stackers.bot_service.app_settings.stacker_config_dir",
         config_dir,
     )
     monkeypatch.setattr(
-        "ops_bot.stackers.bot_service.app_settings.stacker_logs_dir",
+        "ops-bot.stackers.bot_service.app_settings.stacker_logs_dir",
         logs_dir,
     )
 
     values = iter([0.10, 0.20, 0.50, 0.30, 0.30, 0.40, 0.40, 0.10, 0.20, 0.20, 0.80, 0.30])
     monkeypatch.setattr(
-        "ops_bot.stackers.bot_service.random.random",
+        "ops-bot.stackers.bot_service.random.random",
         lambda: next(values),
     )
 
@@ -110,17 +110,17 @@ def test_setup_stackers_executes_api_in_real_mode(
     config_dir = tmp_path / "stackers" / "config"
     logs_dir = tmp_path / "stackers" / "logs"
     monkeypatch.setattr(
-        "ops_bot.stackers.bot_service.app_settings.stacker_config_dir",
+        "ops-bot.stackers.bot_service.app_settings.stacker_config_dir",
         config_dir,
     )
     monkeypatch.setattr(
-        "ops_bot.stackers.bot_service.app_settings.stacker_logs_dir",
+        "ops-bot.stackers.bot_service.app_settings.stacker_logs_dir",
         logs_dir,
     )
 
     values = iter([0.10, 0.20, 0.50, 0.30])
     monkeypatch.setattr(
-        "ops_bot.stackers.bot_service.random.random",
+        "ops-bot.stackers.bot_service.random.random",
         lambda: next(values),
     )
 
@@ -139,7 +139,7 @@ def test_setup_stackers_executes_api_in_real_mode(
             payload=payload,
         )
 
-    monkeypatch.setattr("ops_bot.stackers.bot_service.OpsApiClient.post", fake_post)
+    monkeypatch.setattr("ops-bot.stackers.bot_service.OpsApiClient.post", fake_post)
 
     message = """/setup-stackers
 {
@@ -201,11 +201,11 @@ def test_setup_stackers_removes_duplicate_random_entries(
     config_dir = tmp_path / "stackers" / "config"
     logs_dir = tmp_path / "stackers" / "logs"
     monkeypatch.setattr(
-        "ops_bot.stackers.bot_service.app_settings.stacker_config_dir",
+        "ops-bot.stackers.bot_service.app_settings.stacker_config_dir",
         config_dir,
     )
     monkeypatch.setattr(
-        "ops_bot.stackers.bot_service.app_settings.stacker_logs_dir",
+        "ops-bot.stackers.bot_service.app_settings.stacker_logs_dir",
         logs_dir,
     )
 
@@ -226,7 +226,7 @@ def test_setup_stackers_removes_duplicate_random_entries(
         ]
     )
     monkeypatch.setattr(
-        "ops_bot.stackers.bot_service.random.random",
+        "ops-bot.stackers.bot_service.random.random",
         lambda: next(values),
     )
 
@@ -280,7 +280,7 @@ def test_setup_stackers_fails_when_unique_count_is_impossible(
     monkeypatch,
 ) -> None:
     monkeypatch.setattr(
-        "ops_bot.stackers.bot_service.random.random",
+        "ops-bot.stackers.bot_service.random.random",
         lambda: 0.10,
     )
 
@@ -332,17 +332,17 @@ def test_update_stackers_builds_dry_run_body(
     config_dir = tmp_path / "stackers" / "config"
     logs_dir = tmp_path / "stackers" / "logs"
     monkeypatch.setattr(
-        "ops_bot.stackers.bot_service.app_settings.stacker_config_dir",
+        "ops-bot.stackers.bot_service.app_settings.stacker_config_dir",
         config_dir,
     )
     monkeypatch.setattr(
-        "ops_bot.stackers.bot_service.app_settings.stacker_logs_dir",
+        "ops-bot.stackers.bot_service.app_settings.stacker_logs_dir",
         logs_dir,
     )
 
     values = iter([0.10, 0.20, 0.50, 0.30])
     monkeypatch.setattr(
-        "ops_bot.stackers.bot_service.random.random",
+        "ops-bot.stackers.bot_service.random.random",
         lambda: next(values),
     )
 
@@ -399,11 +399,11 @@ def test_update_stackers_executes_api_in_real_mode(
     config_dir = tmp_path / "stackers" / "config"
     logs_dir = tmp_path / "stackers" / "logs"
     monkeypatch.setattr(
-        "ops_bot.stackers.bot_service.app_settings.stacker_config_dir",
+        "ops-bot.stackers.bot_service.app_settings.stacker_config_dir",
         config_dir,
     )
     monkeypatch.setattr(
-        "ops_bot.stackers.bot_service.app_settings.stacker_logs_dir",
+        "ops-bot.stackers.bot_service.app_settings.stacker_logs_dir",
         logs_dir,
     )
 
@@ -419,7 +419,7 @@ def test_update_stackers_executes_api_in_real_mode(
             payload=payload,
         )
 
-    monkeypatch.setattr("ops_bot.stackers.bot_service.OpsApiClient.post", fake_post)
+    monkeypatch.setattr("ops-bot.stackers.bot_service.OpsApiClient.post", fake_post)
 
     message = """/update-stackers
 {

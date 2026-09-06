@@ -35,15 +35,15 @@ def test_schedule_stacker_batch_run(monkeypatch, tmp_path: Path) -> None:
     logs_dir = tmp_path / "prefect_schedules" / "logs"
     state_dir = tmp_path / "prefect_schedules" / "state"
     monkeypatch.setattr(
-        "ops_bot.prefect_schedules.bot_service.app_settings.prefect_schedule_logs_dir",
+        "ops-bot.prefect_schedules.bot_service.app_settings.prefect_schedule_logs_dir",
         logs_dir,
     )
     monkeypatch.setattr(
-        "ops_bot.prefect_schedules.bot_service.app_settings.prefect_schedule_state_dir",
+        "ops-bot.prefect_schedules.bot_service.app_settings.prefect_schedule_state_dir",
         state_dir,
     )
     monkeypatch.setattr(
-        "ops_bot.prefect_schedules.bot_service.app_settings.prefect_ui_url",
+        "ops-bot.prefect_schedules.bot_service.app_settings.prefect_ui_url",
         "http://prefect.test:4200",
     )
 
@@ -85,7 +85,7 @@ def test_schedule_stacker_batch_run(monkeypatch, tmp_path: Path) -> None:
             )
 
     monkeypatch.setattr(
-        "ops_bot.prefect_schedules.bot_service.PrefectApiClient",
+        "ops-bot.prefect_schedules.bot_service.PrefectApiClient",
         FakePrefectApiClient,
     )
 
@@ -127,11 +127,11 @@ def test_schedule_new_listing_creates_staggered_runs(monkeypatch, tmp_path: Path
     logs_dir = tmp_path / "prefect_schedules" / "logs"
     state_dir = tmp_path / "prefect_schedules" / "state"
     monkeypatch.setattr(
-        "ops_bot.prefect_schedules.bot_service.app_settings.prefect_schedule_logs_dir",
+        "ops-bot.prefect_schedules.bot_service.app_settings.prefect_schedule_logs_dir",
         logs_dir,
     )
     monkeypatch.setattr(
-        "ops_bot.prefect_schedules.bot_service.app_settings.prefect_schedule_state_dir",
+        "ops-bot.prefect_schedules.bot_service.app_settings.prefect_schedule_state_dir",
         state_dir,
     )
 
@@ -170,7 +170,7 @@ def test_schedule_new_listing_creates_staggered_runs(monkeypatch, tmp_path: Path
             )
 
     monkeypatch.setattr(
-        "ops_bot.prefect_schedules.bot_service.PrefectApiClient",
+        "ops-bot.prefect_schedules.bot_service.PrefectApiClient",
         FakePrefectApiClient,
     )
 
@@ -231,7 +231,7 @@ def test_launch_flow_box_is_optional() -> None:
 def test_remove_schedules_accepts_explicit_flow_run_ids(monkeypatch, tmp_path: Path) -> None:
     logs_dir = tmp_path / "prefect_schedules" / "logs"
     monkeypatch.setattr(
-        "ops_bot.prefect_schedules.bot_service.app_settings.prefect_schedule_logs_dir",
+        "ops-bot.prefect_schedules.bot_service.app_settings.prefect_schedule_logs_dir",
         logs_dir,
     )
 
@@ -247,7 +247,7 @@ def test_remove_schedules_accepts_explicit_flow_run_ids(monkeypatch, tmp_path: P
             }
 
     monkeypatch.setattr(
-        "ops_bot.prefect_schedules.bot_service.PrefectApiClient",
+        "ops-bot.prefect_schedules.bot_service.PrefectApiClient",
         FakePrefectApiClient,
     )
 
@@ -347,7 +347,7 @@ def test_prefect_api_client_sends_basic_auth(monkeypatch) -> None:
 def test_schedule_logs_prefect_lookup_failure(monkeypatch, tmp_path: Path) -> None:
     logs_dir = tmp_path / "prefect_schedules" / "logs"
     monkeypatch.setattr(
-        "ops_bot.prefect_schedules.bot_service.app_settings.prefect_schedule_logs_dir",
+        "ops-bot.prefect_schedules.bot_service.app_settings.prefect_schedule_logs_dir",
         logs_dir,
     )
 
@@ -356,7 +356,7 @@ def test_schedule_logs_prefect_lookup_failure(monkeypatch, tmp_path: Path) -> No
             raise ValueError("deployment lookup failed with HTTP 404: Not Found")
 
     monkeypatch.setattr(
-        "ops_bot.prefect_schedules.bot_service.PrefectApiClient",
+        "ops-bot.prefect_schedules.bot_service.PrefectApiClient",
         FakePrefectApiClient,
     )
 
