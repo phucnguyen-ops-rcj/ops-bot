@@ -84,7 +84,7 @@ minutes, and mirror at `+120` minutes by default.
 ## Setup
 
 ```bash
-cd /Users/nguyentienphuc/rcj/ops_bot
+cd /Users/nguyentienphuc/rcj/ops-bot
 cp .env.example .env
 uv sync
 uv run baml-cli generate
@@ -162,9 +162,15 @@ docker build -t rcj-ops-bot:latest .
 
 docker run -d --name rcj-ops-bot \
   --env-file .env \
-  -e SIGNAL_BASE_URL=http://host.docker.internal:8081 \
-  -e SIGNAL_GROUP_CACHE_PATH=/data/signal_groups.yml \
   -v "$HOME/.ssh:/home/opsbot/.ssh:ro" \
+  -v "$(pwd)/.docker-data:/data" \
+  --restart unless-stopped \
+  rcj-ops-bot:latest
+
+# in zeabur
+docker run -d --name rcj-ops-bot \
+  --env-file .env \
+  -v "/root/.ssh:/home/opsbot/.ssh:ro" \
   -v "$(pwd)/.docker-data:/data" \
   --restart unless-stopped \
   rcj-ops-bot:latest
@@ -177,8 +183,6 @@ docker rm -f rcj-ops-bot || true && \
 docker build -t rcj-ops-bot:latest . && \
 docker run -d --name rcj-ops-bot \
   --env-file .env \
-  -e SIGNAL_BASE_URL=http://host.docker.internal:8081 \
-  -e SIGNAL_GROUP_CACHE_PATH=/data/signal_groups.yml \
   -v "$HOME/.ssh:/home/opsbot/.ssh:ro" \
   -v "$(pwd)/.docker-data:/data" \
   --restart unless-stopped \
